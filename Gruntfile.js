@@ -56,11 +56,6 @@ module.exports = function(grunt) {
 			}
 		},
 		watch: {
-			dev: {
-				files: [ "lib/**/*" ],
-				tasks: [ 'dev' ],
-				options: { spawn: false }
-			},
 			test: {
 				files: [ "lib/**/*", "test/**/*.js" ],
 				tasks: [ 'test' ],
@@ -79,7 +74,7 @@ module.exports = function(grunt) {
 	grunt.registerTask('build-test', [ 'browserify:test', 'wrap2000:test' ]);
 	grunt.registerTask('build-dist', [ 'browserify:dist', 'wrap2000:dist', 'uglify:dist' ]);
 
-	grunt.registerTask('dev', [ 'clean', 'build-dev', 'watch:dev' ]);
+	grunt.registerTask('dev', [ 'clean', 'build-dev' ]);
 	grunt.registerTask('test', [ 'clean', 'build-test', 'watch:test' ]);
 	grunt.registerTask('dist', [ 'clean', 'build-dist'  ]);
 

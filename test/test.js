@@ -9,4 +9,9 @@ describe("Lazybones", function() {
 		expect(doc.get("foo")).to.equal("bar");
 	});
 
+	it("creates a database", function() {
+		var db = new Lazybones("testdb");
+		expect(db.id).to.equal("testdb");
+	});
+
 });

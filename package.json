@@ -1,21 +1,24 @@
 {
-  "name": "lazybones",
-  "version": "0.1.0",
-  "main": "lib/index.js",
-  "dependencies": {
-    "backbone": "^1.1.2",
-    "backbone-symlink": "^0.2.0",
-    "chai": "^1.10.0",
-    "debug": "^2.1.0",
-    "pouchdb": "^3.1.0",
-    "underscore": "^1.7.0"
-  },
-  "devDependencies": {
-    "grunt": "^0.4.5",
-    "grunt-browserify": "^3.2.0",
-    "grunt-contrib-clean": "^0.6.0",
-    "grunt-contrib-uglify": "^0.6.0",
-    "grunt-contrib-watch": "^0.6.1",
-    "grunt-wrap2000": "^0.1.0"
-  }
+	"name": "lazybones",
+	"version": "0.1.0",
+	"main": "lib/index.js",
+	"scripts": {
+		"test": "grunt clean build-test && ./node_modules/.bin/mocha test"
+	},
+	"dependencies": {
+		"backbone": "^1.1.2",
+		"backbone-symlink": "^0.2.0",
+		"chai": "^1.10.0",
+		"debug": "^2.1.0",
+		"pouchdb": "^3.1.0",
+		"underscore": "^1.7.0"
+	},
+	"devDependencies": {
+		"grunt": "^0.4.5",
+		"grunt-browserify": "^3.2.0",
+		"grunt-contrib-clean": "^0.6.0",
+		"grunt-contrib-uglify": "^0.6.0",
+		"grunt-contrib-watch": "^0.6.1",
+		"grunt-wrap2000": "^0.1.0"
+	}
 }
