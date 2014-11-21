@@ -1,6 +1,9 @@
 var http = require("http"),
 	fs = require("fs"),
-	path = require("path");
+	path = require("path"),
+	grunt = require("grunt");
+
+var argv = require('minimist')(process.argv.slice(2));
 
 function resolve(p) {
 	return path.resolve(__dirname, "../..", p);
@@ -15,7 +18,7 @@ var mimes = {
 var server = http.createServer(function(req, res) {
 	res.statusCode = 200;
 
-	console.log("%s %s", req.method, req.url);
+	grunt.log.debug("%s %s", req.method, req.url);
 
 	var fpath = resolve("." + req.url),
 		stat, mime;
@@ -36,6 +39,22 @@ var server = http.createServer(function(req, res) {
 	});
 });
 
-server.listen(8000, function() {
-	console.log("Test server listening on port 8000.")
+var options = { debug: argv.debug };
+
+grunt.tasks([ "build-test" ], options, function(err) {
+	if (err) {
+		console.error(err.stack || err.toString());
+		return process.exit(1);
+	}
+
+	server.listen(8000, function() {
+		grunt.log.ok("Test server listening on port 8000.");
+
+		grunt.tasks([ "watch:test" ], options, function(err) {
+			if (err) {
+				console.error(err.stack || err.toString());
+				return process.exit(1);
+			}
+		});
+	});
 });
