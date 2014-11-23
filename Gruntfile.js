@@ -22,7 +22,7 @@ module.exports = function(grunt) {
 				src: "test/*.js",
 				dest: "dist/lazybones.test.js",
 				options: {
-					browserifyOptions: { debug: true }
+					browserifyOptions: { debug: true, require: [ "pouchdb" ] }
 				}
 			}
 		},
