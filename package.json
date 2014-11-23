@@ -1,11 +1,27 @@
 {
 	"name": "lazybones",
+	"description": "An object-oriented abstraction of PouchDB using Backbone models and collections.",
 	"version": "0.1.0",
-	"main": "lib/index.js",
+	"author": "Beneath the Ink <info@beneaththeink.com>",
+	"contributors": [
+		{
+			"name": "Tyler Johnson",
+			"email": "tyler@beneaththeink.com",
+			"url": "http://github.com/tyler-johnson"
+		}
+	],
+	"publishConfig": {
+		"registry": "http://registry.npmjs.org"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/BeneathTheInk/lazybones.git"
+	},
 	"scripts": {
 		"dev": "node test/browser",
 		"test": "grunt build-test && ./node_modules/.bin/mocha test"
 	},
+	"main": "lib/index.js",
 	"dependencies": {
 		"backbone": "~1.1.2",
 		"backbone-symlink": "~0.2.0",
@@ -24,5 +40,16 @@
 		"grunt-wrap2000": "~0.1.0",
 		"minimist": "~1.1.0",
 		"mocha": "~2.0.1"
-	}
+	},
+	"license": "MIT",
+	"keywords": [
+		"backbone",
+		"pouchdb",
+		"couchdb",
+		"lazy",
+		"bones",
+		"model",
+		"sync",
+		"conflict"
+	]
 }
