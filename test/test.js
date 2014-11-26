@@ -1,22 +1,9 @@
 require("bluebird").longStackTraces();
 
 var Lazybones = require("../"),
-	chai = require("chai"),
-	expect = chai.expect;
+	expect = require("chai").expect;
 
-chai.Assertion.addProperty('LazyError', function() {
-	this.instanceof(Lazybones.utils.LazyError);
-});
-
-chai.Assertion.addMethod('errorcode', function(expected_code) {
-	this.assert(
-		this._obj.code === expected_code,
-		"expected error code '" + expected_code + "' but recieved '" + this._obj.code + "' instead",
-		"expected error code to not be '" + expected_code + "'"
-	);
-});
-
-describe("Basics", function() {
+describe("Documents", function() {
 	
 	it("creates document model with a new id", function() {
 		var doc = new Lazybones.Document({ foo: "bar" });
@@ -34,32 +21,32 @@ describe("Basics", function() {
 		expect(doc.isNew()).to.not.be.ok;
 	});
 
+});
+
+describe("Database", function() {
+
 	it("creates a database instance", function() {
 		var db = new Lazybones("testdb");
-		expect(db.id).to.equal("testdb");
-		expect(db.isNew()).to.equal(true);
-		expect(db).to.be.instanceof(Lazybones.Document);
+		expect(db.name).to.equal("testdb");
 	});
 
 	it("throws error if database is missing an ID", function() {
-		var threw = false;
-
-		try {
+		expect(function() {
 			new Lazybones();
-		} catch(e) {
-			expect(e).to.be.LazyError.with.errorcode("MISSING_ID");
-			threw = true;
-		}
+		}).to.throw(Lazybones.utils.LazyError, /MISSING_ID/);
+	});
 
-		expect(threw).to.equal(true, "threw an error");
+	it("destroys a database", function(done) {
+		var db = new Lazybones("testdb");
+		db.destroy().then(function() { done(); }, done);
 	});
 
 });
 
-describe("Sync", function() {
+describe("CRUD", function() {
 	var db;
 
-	this.slow(5000);
+	this.slow(3000);
 	this.timeout(20000);
 
 	beforeEach(function() {
@@ -70,18 +57,109 @@ describe("Sync", function() {
 		db.destroy().then(function() { done(); }, done);
 	});
 
-	it("inserts metadata document if it doesn't exist", function(done) {
-		expect(db.isNew()).to.equal(true);
-		
-		db.save().then(function() {
-			expect(db.isNew()).to.equal(false);
+	it("creates a document", function(done) {
+		var model = db.add({ foo: "bar" });
+
+		model.save().then(function(res) {
+			expect(this).to.equal(model);
+			expect(res.ok).to.be.ok;
+			return db.pouch.get(model.id);
+		})
+
+		.then(function(doc) {
+			expect(doc).to.deep.equal(model.toJSON());
 			done();
-		}).catch(done);
+		})
+
+		.catch(done);
 	});
 
-	it("destroys empty database", function() {
-		// db.destory().then(function() { done(); }, done);
+	it("deletes a document", function(done) {
+		var model = db.add({ foo: "bar" });
+
+		model.save().then(function() {
+			return model.destroy();
+		})
+
+		.then(function(res) {
+			expect(res.ok).to.be.ok;
+			expect(db.contains(model)).to.not.be.ok;
+			return db.pouch.get(model.id).then(function() {
+				throw new Error("Document was not deleted from database.");
+			}, function(e) {
+				expect(e.status).to.equal(404);
+				done();
+			});
+		})
+
+		.catch(done);
 	});
+
+	it("updates a document", function(done) {
+		var model = db.add({ foo: "bar" });
+
+		model.save().then(function() {
+			return model.set({ foo: true, bam: "baz" }).save();
+		})
+
+		.then(function(res) {
+			expect(res.ok).to.be.ok;
+			return db.pouch.get(model.id);
+		})
+
+		.then(function(doc) {
+			expect(doc).to.deep.equal(model.toJSON());
+			done();
+		})
+
+		.catch(done);
+	});
+
+	it("reads a database", function(done) {
+		db.pouch.bulkDocs([
+			{ _id: "a" },
+			{ _id: "b" },
+			{ _id: "c" }
+		]).then(function() {
+			return db.fetch();
+		})
+
+		.then(function() {
+			expect(db.length).to.equal(3);
+			expect(db.pluck("_id").sort()).to.deep.equal([ "a", "b", "c" ]);
+			done();
+		})
+
+		.catch(done);
+	});
+
+	it("reads a document", function(done) {
+		var model = db.add({ foo: "bar" }),
+			docid = model.id;
+
+		model.save().then(function(res) {
+			return db.pouch.put({
+				_id: docid,
+				_rev: res.rev,
+				foo: "baz"
+			});
+		}).then(function() {
+			return model.fetch();
+		})
+
+		.then(function() {
+			expect(model.get("foo")).to.equal("baz");
+			expect(model.get("_rev").substr(0, 1)).to.equal("2");
+			done();
+		})
+
+		.catch(done);
+	});
+
+});
+
+describe("Live Sync", function() {
+
 });
 
 describe("Conflicts", function() {
