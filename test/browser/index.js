@@ -39,6 +39,7 @@ var server = http.createServer(function(req, res) {
 	});
 });
 
+var port = argv.port || 8000;
 var options = { debug: argv.debug };
 
 grunt.tasks([ "build-test" ], options, function(err) {
@@ -47,8 +48,8 @@ grunt.tasks([ "build-test" ], options, function(err) {
 		return process.exit(1);
 	}
 
-	server.listen(8000, function() {
-		grunt.log.ok("Test server listening on port 8000.");
+	server.listen(port, function() {
+		grunt.log.ok("Test server listening on port " + port + ".");
 
 		grunt.tasks([ "watch:test" ], options, function(err) {
 			if (err) {
