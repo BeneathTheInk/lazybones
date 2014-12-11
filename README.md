@@ -18,7 +18,7 @@ $ npm install lazybones
 
 ## Basic Usage
 
-Lazybones is a modified Backbone collection with a custom sync function that allows for fetching and writing to a Pouch database. You begin using Lazybones, you only need the name of the database your are using:
+Lazybones is a modified Backbone collection with a custom sync function that allows for fetching and writing to a Pouch database. To begin using Lazybones, you only need the name of the database you are using:
 
 ```javascript
 var db = new Lazybones("mydb");
@@ -34,7 +34,7 @@ db.fetch().then(function() {
 });
 ```
 
-Using fetch you can also retrieve specific subsets of documents, like only those in a specific view. All the standard Backbone sync options are available too.
+Using fetch, you can also retrieve specific subsets of documents, for example only those in a specific CouchDB view. Just add `filter: "myview"` to fetch options. All the other standard Backbone sync options are available too.
 
 Lazybones also provides a method for continuously listening to changes in the database and replicating them to the in-memory documents:
 
@@ -45,7 +45,7 @@ db.connect();
 db.disconnect();
 ```
 
-When `.connect()` is called, the database will listen to the database changes feed and duplicate whatever is there. This means that `connect`, in a lot of ways, is like fetch with the exception that it is continuous.
+When `.connect()` is called, the database will listen to the database changes feed and automatically push changes to documents in the collection. This means that `connect`, in a lot of ways, is like fetch with the exception that it continually updates the documents.
 
 ## API
 
@@ -57,7 +57,7 @@ The Lazybones database constructor. This returns an instance of Lazybones, which
 
 The name should be a string used to connect to a Pouch database. This can either be a local database name (indexeddb or leveldb) or a remote CouchDB url. This argument is required.
 
-`options` are passed directly to the `Backbone.Collection` constructor, with the exception of one parameter:
+`options` are passed directly to the `Backbone.Collection` constructor, except for one parameter:
 
 - `pouch` *optional* - An instance of PouchDB or an object of options to pass to the PouchDB constructor.
 
@@ -75,4 +75,4 @@ Destroys the Pouch database, ensuring any queued writes are properly canceled.
 
 ### `new Lazybones.Document( [ attrs ][, options ] )`
 
-This is the `Backbone.Model` subclass used to represent all documents in the database. This model has an identical API to `Backbone.Model`, with the exception of a few modified methods to help it work with sync.
+This is the `Backbone.Model` subclass used to represent all documents in the database. This model has an identical API to `Backbone.Model`.
