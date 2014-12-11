@@ -73,6 +73,6 @@ Disconnects the database from the changes feeds or does nothing if not currently
 
 Destroys the Pouch database, ensuring any queued writes are properly canceled.
 
-### `new Lazybones.Document( [ attrs ][, options ] )`
+### `new Lazybones.Document( [ attrs [, options ] ] )`
 
 This is the `Backbone.Model` subclass used to represent all documents in the database. This model has an identical API to `Backbone.Model`.
