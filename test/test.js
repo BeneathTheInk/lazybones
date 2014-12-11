@@ -46,8 +46,8 @@ describe("Database", function() {
 describe("CRUD", function() {
 	var db;
 
-	this.slow(3000);
-	this.timeout(20000);
+	this.slow(1000);
+	this.timeout(5000);
 
 	beforeEach(function() {
 		db = new Lazybones("testdb");
