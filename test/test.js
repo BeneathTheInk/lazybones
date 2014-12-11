@@ -21,6 +21,12 @@ describe("Documents", function() {
 		expect(doc.isNew()).to.not.be.ok;
 	});
 
+	it("can create subclass from Document class", function() {
+		var subclass = Lazybones.Document.extend({ foo: function() {} });
+		expect(subclass.prototype.foo).to.be.a.function;
+		expect(subclass.prototype.get).to.be.a.function;
+	});
+
 });
 
 describe("Database", function() {
@@ -39,6 +45,12 @@ describe("Database", function() {
 	it("destroys a database", function(done) {
 		var db = new Lazybones("testdb");
 		db.destroy().then(function() { done(); }, done);
+	});
+
+	it("can create subclass from Database class", function() {
+		var subclass = Lazybones.extend({ foo: function() {} });
+		expect(subclass.prototype.foo).to.be.a.function;
+		expect(subclass.prototype.get).to.be.a.function;
 	});
 
 });
