@@ -47,32 +47,42 @@ db.disconnect();
 
 When `.connect()` is called, the database will listen to the database changes feed and automatically push changes to documents in the collection. This means that `connect`, in a lot of ways, is like fetch with the exception that it continually updates the documents.
 
-## API
+## Documentation
 
-Lazybones has a unique API, however most it is inherited from Backbone. Please read the [Backbone documentation](http://backbonejs.org/) for more information on methods and concepts.
+For quick documentation on each function, please see the inline comments in the source code. These comments are in JSDoc3 format, so you can also build them for a prettier experience.
 
-### `new LazyBones( name [, options ] )`
+```bash
+jsdoc -c jsdoc.conf.json
+```
 
-The Lazybones database constructor. This returns an instance of Lazybones, which is a subclass of `Backbone.Collection`.
+If you don't have JSDoc3 installed globally, run `npm install -g jsdoc3` (or see <https://github.com/jsdoc3/jsdoc>) before running that command.
 
-The name should be a string used to connect to a Pouch database. This can either be a local database name (indexeddb or leveldb) or a remote CouchDB url. This argument is required.
+## How to Build from Scratch
 
-`options` are passed directly to the `Backbone.Collection` constructor, except for one parameter:
+Lazybones uses Grunt to build a Browserify bundle from the original source found in `lib/`. When the command below completes, the compiled source will be saved to `dist/` directory.
 
-- `pouch` *optional* - An instance of PouchDB or an object of options to pass to the PouchDB constructor.
+```bash
+npm install && grunt
+```
 
-### `db.connect( [ options ] )`
+If you don't the Grunt cli tools installed globally, run `npm install -g grunt-cli` before running that command.
 
-Listens to the changes feed in the PouchDB and sets all changes to the in-memory documents. This allows the models to respond to changes in the database as the happen. `options` is an optional argument that is passed to `pouch.changes()`.
+## Running the Unit Tests
 
-### `db.disconnect( )`
+Lazybones has several unit tests written for Node.js and the browser. Before running tests, install all test dependencies:
 
-Disconnects the database from the changes feeds or does nothing if not currently connected.
+```
+npm install
+```
 
-### `db.destroy( )`
+To get tests running on Node.js, run:
 
-Destroys the Pouch database, ensuring any queued writes are properly canceled.
+```
+npm test
+```
 
-### `new Lazybones.Document( [ attrs [, options ] ] )`
+To run tests in the browser, start a test server with this command. When the server is running, navigate your browser to <http://localhost:8000>.
 
-This is the `Backbone.Model` subclass used to represent all documents in the database. This model has an identical API to `Backbone.Model`.
+```
+npm run dev
+```
