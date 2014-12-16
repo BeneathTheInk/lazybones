@@ -67,7 +67,7 @@
                 <a class="pilcrow" href="#section-2">&#182;</a>
               </div>
               <h1>Lazybones</h1>
-<p>Lazybones is a JavaScript class that extends <code>Backbone.Collection</code> and uses <a href="http://pouchdb.com">PouchDB</a> to persist data. A deeper understanding of <a href="http://backbonejs.org">Backbone</a> is recommended since many of Lazybones methods and concepts are inherited directly from Backbone Collection. Knowledge of PouchDB’s API is also recommended, but not required to use Lazybones.</p>
+<p>Lazybones is a modified Backbone collection that integrates with PouchDB. By combining Backbone’s object-oriented approach with PouchDB’s super flexible databases, Lazybones provides a highly-functional API for storing and manipulating data in the browser and Node.js.</p><p>A deeper understanding of <a href="http://backbonejs.org">Backbone</a> is recommended since many of Lazybones methods and concepts are inherited directly from Backbone Collection. Knowledge of PouchDB’s API is also recommended, but not required to use Lazybones.</p>
             </div>
             
             <div class="content"><div class='highlight'><pre><span class="hljs-keyword">var</span> _ = <span class="hljs-built_in">require</span>(<span class="hljs-string">"underscore"</span>),
@@ -194,8 +194,8 @@ Lazybones.extend = Backbone.Collection.extend;</pre></div></div>
 <p>Listens to the PouchDB changes feed and replicates any changes to the in-memory documents. By default, the changes are “live” meaning that future changes will listened for. Use the <code>.disconnect()</code> to stop a live connection.</p><p><code>this</code> is returned for method chaining.</p><h4>Arguments</h4>
 <ul>
 <li><strong>options</strong> <em>object; optional</em> - An object of properties that are passed to <code>pouch.changes()</code>. All PouchDB changes properties are allowed, except for <code>include_docs</code> which is set to true. Below are the properties with default values. Please see the <a href="http://pouchdb.com/api.html#changes">PocuhDB documentation</a> for the remaining options.<ul>
-<li><strong>options.attachments</strong> <em>boolean</em> - An object of options to initiate the database with. This variable is passed directly to the <code>Backbone.Collection</code> constructor. Default value is <code>false</code>.</li>
-<li><strong>options.conflicts</strong> <em>boolean</em> - Whether or not to include conflicting revision ids in the <code>_conflicts</code> field. Default value is <code>true</code>.</li>
+<li><strong>options.attachments</strong> <em>boolean</em> - Whether or not to include attachment data in the request. If <code>true</code>, attachments will be accessible via the <code>_attachments</code> attribute. Default value is <code>false</code>.</li>
+<li><strong>options.conflicts</strong> <em>boolean</em> - Whether or not to include conflicting revision ids in the <code>_conflicts</code> attribute. Default value is <code>true</code>.</li>
 <li><strong>options.returnDocs</strong> <em>boolean</em> - Tells PouchDB to not return all the documents on the <code>complete</code> event, preventing a lot of extra memory usage. Default value is <code>false</code>.</li>
 <li><strong>options.live</strong> <em>boolean</em> - The database will continuously listen for changes, keeping the in-memory documents in sync with those in the database. Setting this to <code>false</code> will result in the database disconnecting as soon as it is has been caught up. Default value is <code>true</code>.</li>
 </ul>
@@ -296,7 +296,7 @@ Lazybones.extend = Backbone.Collection.extend;</pre></div></div>
                 <a class="pilcrow" href="#section-8">&#182;</a>
               </div>
               <h3>destroy()</h3>
-<p>Destroys the PouchDB underlying database. This will keep all the existing documents in-memory, so call <code>db.reset()</code> to remove those as well. The Lazybones instance is unusable once this method has been called.</p><p>This method returns a promise that is resolved when the database is destroyed.</p>
+<p>Destroys the underlying PouchDB database. This will keep all the existing documents in-memory, so call <code>db.reset()</code> to remove those as well. The Lazybones instance should not be used after this method has been called.</p><p>This method returns a promise that is resolved when the database is destroyed.</p>
             </div>
             
             <div class="content"><div class='highlight'><pre>    destroy: <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> </span>{
@@ -392,7 +392,7 @@ Lazybones.extend = Backbone.Collection.extend;</pre></div></div>
                 <a class="pilcrow" href="#section-10">&#182;</a>
               </div>
               <h3>_flushWrites()</h3>
-<p>A private method that pushes the first 100 requests in the write queue to the database. When finished, this calls <code>db._invalidateWrites()</code> to continue the cycle.</p><p>This method returns a promise that is resolved when the first 100 writes are completed.</p>
+<p>A private method that pushes the first 100 requests in the write queue to the database. When finished, this calls <code>db._invalidateWrites()</code> to continue flushing any remaining requests.</p><p>This method returns a promise that is resolved when the requests pulled from the queue on this flush have all completed.</p>
             </div>
             
             <div class="content"><div class='highlight'><pre>    _flushWrites: <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> </span>{
