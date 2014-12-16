@@ -20,7 +20,7 @@
 	"scripts": {
 		"dev": "node test/browser",
 		"test": "grunt build-test && ./node_modules/.bin/mocha test",
-		"build-docs": "./node_modules/.bin/doxxo ./lib/*.js"
+		"build-docs": "./node_modules/.bin/doxxo -l bti ./lib/*.js"
 	},
 	"main": "lib/index.js",
 	"dependencies": {
@@ -40,7 +40,7 @@
 		"grunt-wrap2000": "~0.1.0",
 		"minimist": "~1.1.0",
 		"mocha": "~2.0.1",
-		"doxxo": "~0.1.1"
+		"doxxo": "~0.1.4"
 	},
 	"license": "MIT",
 	"keywords": [
