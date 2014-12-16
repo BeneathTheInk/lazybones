@@ -1,7 +1,7 @@
 {
 	"name": "lazybones",
 	"description": "An object-oriented abstraction of PouchDB using Backbone models and collections.",
-	"version": "0.1.4",
+	"version": "0.1.5",
 	"author": "Beneath the Ink <info@beneaththeink.com>",
 	"contributors": [
 		{
