@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+  <title>Document</title>
+  <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+  <meta name="viewport" content="width=device-width, target-densitydpi=160dpi, initial-scale=1.0; maximum-scale=1.0; user-scalable=0;">
+  <link rel="stylesheet" media="all" href="docco.css" />
+</head>
+<body>
+  <div id="container">
+    <div id="background"></div>
+    
+      <ul id="jump_to">
+        <li>
+          <a class="large" href="javascript:void(0);">Jump To &hellip;</a>
+          <a class="small" href="javascript:void(0);">+</a>
+          <div id="jump_wrapper">
+          <div id="jump_page_wrapper">
+            <div id="jump_page">
+              
+                
+                <a class="source" href="document.html">
+                  document.js
+                </a>
+              
+                
+                <a class="source" href="index.html">
+                  index.js
+                </a>
+              
+                
+                <a class="source" href="sync.html">
+                  sync.js
+                </a>
+              
+                
+                <a class="source" href="utils.html">
+                  utils.js
+                </a>
+              
+            </div>
+          </div>
+        </li>
+      </ul>
+    
+    <ul class="sections">
+        
+        
+        
+        <li id="section-1">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-1">&#182;</a>
+              </div>
+              
+            </div>
+            
+        </li>
+        
+        
+        <li id="section-2">
+            <div class="annotation">
+              
+              <div class="pilwrap for-h1">
+                <a class="pilcrow" href="#section-2">&#182;</a>
+              </div>
+              <h1>Document</h1>
+<p>Lazybones uses the Document class to represent a single document in the database. This class directly extends <code>Backbone.Model</code> and keeps it more or less true to its original form.</p>
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-keyword">var</span> _ = <span class="hljs-built_in">require</span>(<span class="hljs-string">"underscore"</span>),
+    Backbone = <span class="hljs-built_in">require</span>(<span class="hljs-string">"backbone"</span>),
+    utils = <span class="hljs-built_in">require</span>(<span class="hljs-string">"./utils"</span>);</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-3">
+            <div class="annotation">
+              
+              <div class="pilwrap for-h2">
+                <a class="pilcrow" href="#section-3">&#182;</a>
+              </div>
+              <h2>Constructor</h2>
+<p>To create a new document model, use <code>db.add()</code> on the Lazybones instance. This ensures the document is properly initialized, with correct reference back to the database object.</p><pre><code class="lang-javascript"><span class="hljs-keyword">var</span> model = db.add({ foo: <span class="hljs-string">"bar"</span> });
+</code></pre>
+<p>Documents always have an <code>_id</code> attribute. If one is not provided on creation, a new id is randomly generated and assigned.</p><h4>Arguments</h4>
+<ul>
+<li><strong>attr</strong> <em>object</em> - An object of initial properties for the document.</li>
+<li><strong>options</strong> <em>object; optional</em> - An object of options to initiate the document with. This variable is passed directly to the <code>Backbone.Model</code> constructor.<ul>
+<li><strong>options.collection</strong> <em>Lazybones</em> - An instance of Lazybones to use as the attached database. This value is used by <code>Lazybones.sync</code> to make database writes.</li>
+</ul>
+</li>
+</ul>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">Document</span><span class="hljs-params">(attrs, options)</span> </span>{
+    <span class="hljs-keyword">if</span> (attrs == <span class="hljs-literal">null</span>) attrs = {};
+
+    <span class="hljs-comment">// make sure there is always an id</span>
+    <span class="hljs-keyword">if</span> (attrs._id == <span class="hljs-literal">null</span>) attrs._id = utils.uuid();
+
+    <span class="hljs-comment">// call parent constructor</span>
+    Backbone.Model.call(<span class="hljs-keyword">this</span>, attrs, options);
+}
+
+<span class="hljs-comment">// export first so any recursive dependents get correct value</span>
+<span class="hljs-built_in">module</span>.exports = Document;
+
+<span class="hljs-comment">// Document extends Backbone.Model</span>
+Document.prototype = <span class="hljs-built_in">Object</span>.create(Backbone.Model.prototype);</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-4">
+            <div class="annotation">
+              
+              <div class="pilwrap for-h2">
+                <a class="pilcrow" href="#section-4">&#182;</a>
+              </div>
+              <h2>Static Methods &amp; Properties</h2>
+<ul>
+<li><strong>Document.extend</strong> <em>function</em> - Creates a subclass of Document. This is the same method that Backbone uses.</li>
+</ul>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>Document.extend = Backbone.Model.extend;</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-5">
+            <div class="annotation">
+              
+              <div class="pilwrap for-h2">
+                <a class="pilcrow" href="#section-5">&#182;</a>
+              </div>
+              <h2>Instance Properties</h2>
+<p>These properties are in addition to the properties set by <code>Backbone.Model</code>.</p><ul>
+<li><strong>db.collection</strong> <em>Lazybones</em> - The Lazybones instance this document is a part of. This property is used by <code>Lazybones.sync</code> to make writes to the correct database.</li>
+<li><strong>db.omitKeys</strong> <em>array[string]</em> - An array of attribute keys that <code>doc.toJSON()</code> will ignore. This is useful if there are attributes that should remain in-memory only and not be saved to the database.</li>
+</ul>
+<h2>Instance Methods</h2>
+<p>These methods are in addition to methods provided by <code>Backbone.Model</code>.</p>
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>_.extend(Document.prototype, {
+    
+    idAttribute: <span class="hljs-string">"_id"</span>,
+    parse: utils.parse,
+    sync: <span class="hljs-built_in">require</span>(<span class="hljs-string">"./sync"</span>),</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-6">
+            <div class="annotation">
+              
+              <div class="pilwrap for-h3">
+                <a class="pilcrow" href="#section-6">&#182;</a>
+              </div>
+              <h3>toJSON()</h3>
+<p>Produces a plain JavaScript object that can be saved directly to PouchDB. Date values are converted to ISO strings. Any keys found in the <code>doc.omitKeys</code> array are removed from the output.</p>
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    toJSON: <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> </span>{
+        <span class="hljs-keyword">var</span> data = Backbone.Model.prototype.toJSON.apply(<span class="hljs-keyword">this</span>, <span class="hljs-built_in">arguments</span>);
+
+        <span class="hljs-comment">// omit specified keys</span>
+        <span class="hljs-keyword">var</span> omitKeys = _.result(<span class="hljs-keyword">this</span>, <span class="hljs-string">"omitKeys"</span>);
+        <span class="hljs-keyword">if</span> (_.isArray(omitKeys)) data = _.omit(data, omitKeys);
+
+        <span class="hljs-comment">// convert dates</span>
+        <span class="hljs-built_in">Object</span>.keys(data).forEach(<span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(key)</span> </span>{
+            <span class="hljs-keyword">if</span> (_.isDate(data[key])) {
+                data[key] = data[key].toISOString();
+            }
+        });
+
+        <span class="hljs-keyword">return</span> data;
+    },</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-7">
+            <div class="annotation">
+              
+              <div class="pilwrap for-h3">
+                <a class="pilcrow" href="#section-7">&#182;</a>
+              </div>
+              <h3>isNew()</h3>
+<p>Determines if the document has ever been saved to the database by checking if <code>_rev</code> attribute exists.</p>
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    isNew: <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> </span>{
+        <span class="hljs-keyword">return</span> !<span class="hljs-keyword">this</span>.has(<span class="hljs-string">"_rev"</span>);
+    },</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-8">
+            <div class="annotation">
+              
+              <div class="pilwrap for-h3">
+                <a class="pilcrow" href="#section-8">&#182;</a>
+              </div>
+              <h3>destroy()</h3>
+<p>Usage is identical to <code>Model#destroy()</code> in Backbone. It is declared here because we must pass the Lazybones reference in via options since the document is removed from the collection before <code>sync()</code> is called.</p>
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    destroy: <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(options)</span> </span>{
+        options = options || {};
+        options.database = <span class="hljs-keyword">this</span>.collection;
+        <span class="hljs-keyword">return</span> Backbone.Model.prototype.destroy.call(<span class="hljs-keyword">this</span>, options);
+    }
+
+});</pre></div></div>
+            
+        </li>
+        
+    </ul>
+  </div>
+</body>
+</html>
