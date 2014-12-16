@@ -19,7 +19,8 @@
 	},
 	"scripts": {
 		"dev": "node test/browser",
-		"test": "grunt build-test && ./node_modules/.bin/mocha test"
+		"test": "grunt build-test && ./node_modules/.bin/mocha test",
+		"build-docs": "./node_modules/.bin/doxxo ./lib/*.js"
 	},
 	"main": "lib/index.js",
 	"dependencies": {
@@ -38,7 +39,8 @@
 		"grunt-contrib-watch": "~0.6.1",
 		"grunt-wrap2000": "~0.1.0",
 		"minimist": "~1.1.0",
-		"mocha": "~2.0.1"
+		"mocha": "~2.0.1",
+		"doxxo": "~0.1.1"
 	},
 	"license": "MIT",
 	"keywords": [

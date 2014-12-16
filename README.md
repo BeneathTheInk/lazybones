@@ -49,13 +49,11 @@ When `.connect()` is called, the database will listen to the database changes fe
 
 ## Documentation
 
-For quick documentation on each function, please see the inline comments in the source code. These comments are in JSDoc3 format, so you can also build them for a prettier experience.
+For quick documentation, please see the inline comments in the source code. These comments are written in markdown, so you can also build them for a prettier experience.
 
 ```bash
-jsdoc -c jsdoc.conf.json
+npm run build-docs
 ```
-
-If you don't have JSDoc3 installed globally, run `npm install -g jsdoc3` (or see <https://github.com/jsdoc3/jsdoc>) before running that command.
 
 ## How to Build from Scratch
 
