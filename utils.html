@@ -20,13 +20,18 @@
             <div id="jump_page">
               
                 
+                <a class="source" href="index.html">
+                  README.md
+                </a>
+              
+                
                 <a class="source" href="document.html">
                   document.js
                 </a>
               
                 
-                <a class="source" href="index.html">
-                  index.js
+                <a class="source" href="lazybones.html">
+                  lazybones.js
                 </a>
               
                 
@@ -113,25 +118,6 @@
               <div class="pilwrap for-h3">
                 <a class="pilcrow" href="#section-5">&#182;</a>
               </div>
-              <h3>pouchOptionKeys</h3>
-<p>Lists of option keys by method names that can be used in PouchDB requests. This allows option objects to be sanitized before being passed to PouchDB.</p>
-            </div>
-            
-            <div class="content"><div class='highlight'><pre>exports.pouchOptionKeys = {
-    get: [ <span class="hljs-string">"rev"</span>, <span class="hljs-string">"revs"</span>, <span class="hljs-string">"revs_info"</span>, <span class="hljs-string">"open_revs"</span>, <span class="hljs-string">"conflicts"</span>, <span class="hljs-string">"attachments"</span>, <span class="hljs-string">"local_seq"</span>, <span class="hljs-string">"ajax"</span> ],
-    allDocs: [ <span class="hljs-string">"include_docs"</span>, <span class="hljs-string">"conflicts"</span>, <span class="hljs-string">"attachments"</span>, <span class="hljs-string">"startkey"</span>, <span class="hljs-string">"endkey"</span>, <span class="hljs-string">"inclusive_end"</span>, <span class="hljs-string">"limit"</span>, <span class="hljs-string">"skip"</span>, <span class="hljs-string">"descending"</span>, <span class="hljs-string">"key"</span>, <span class="hljs-string">"keys"</span> ],
-    changes: [ <span class="hljs-string">"include_docs"</span>, <span class="hljs-string">"conflicts"</span>, <span class="hljs-string">"attachments"</span>, <span class="hljs-string">"filter"</span>, <span class="hljs-string">"doc_ids"</span>, <span class="hljs-string">"since"</span>, <span class="hljs-string">"live"</span>, <span class="hljs-string">"limit"</span>, <span class="hljs-string">"style"</span>, <span class="hljs-string">"view"</span>, <span class="hljs-string">"returnDocs"</span>, <span class="hljs-string">"batch_size"</span> ]
-};</pre></div></div>
-            
-        </li>
-        
-        
-        <li id="section-6">
-            <div class="annotation">
-              
-              <div class="pilwrap for-h3">
-                <a class="pilcrow" href="#section-6">&#182;</a>
-              </div>
               <h3>parse()</h3>
 <p>Parses raw PouchDB document data by converting any ISO dates into Date objects. This method available on all Document and Lazybones instances.</p><h4>Arguments</h4>
 <ul>
@@ -165,11 +151,11 @@ exports.parse = <span class="hljs-function"><span class="hljs-keyword">function<
         </li>
         
         
-        <li id="section-7">
+        <li id="section-6">
             <div class="annotation">
               
               <div class="pilwrap for-h3">
-                <a class="pilcrow" href="#section-7">&#182;</a>
+                <a class="pilcrow" href="#section-6">&#182;</a>
               </div>
               <h3>asyncDefer()</h3>
 <p>Creates a deferred promise that is not resolved until the next system tick.</p><h4>Arguments</h4>
@@ -188,11 +174,11 @@ exports.parse = <span class="hljs-function"><span class="hljs-keyword">function<
         </li>
         
         
-        <li id="section-8">
+        <li id="section-7">
             <div class="annotation">
               
               <div class="pilwrap for-h3">
-                <a class="pilcrow" href="#section-8">&#182;</a>
+                <a class="pilcrow" href="#section-7">&#182;</a>
               </div>
               <h3>LazyError()</h3>
 <p>A custom error class that all errors thrown by Lazybones are wrapped in.</p><h4>Arguments</h4>
@@ -244,11 +230,11 @@ LazyError.prototype.toString = <span class="hljs-function"><span class="hljs-key
         </li>
         
         
-        <li id="section-9">
+        <li id="section-8">
             <div class="annotation">
               
               <div class="pilwrap for-h4">
-                <a class="pilcrow" href="#section-9">&#182;</a>
+                <a class="pilcrow" href="#section-8">&#182;</a>
               </div>
               <h4>Error Codes</h4>
 <p>These are the error codes used by LazyError and their default messages. Custom error codes can be created by adding to this list.</p>
@@ -269,11 +255,11 @@ LazyError.prototype.toString = <span class="hljs-function"><span class="hljs-key
         </li>
         
         
-        <li id="section-10">
+        <li id="section-9">
             <div class="annotation">
               
               <div class="pilwrap for-h3">
-                <a class="pilcrow" href="#section-10">&#182;</a>
+                <a class="pilcrow" href="#section-9">&#182;</a>
               </div>
               <h3>transformPouchError()</h3>
 <p>Transforms a PouchError into a LazyError and then throws it. If the passed error is not a PouchError, the original error is thrown without modification.</p><h4>Arguments</h4>
@@ -285,7 +271,8 @@ LazyError.prototype.toString = <span class="hljs-function"><span class="hljs-key
             
             <div class="content"><div class='highlight'><pre>exports.transformPouchError = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(e)</span> </span>{
     <span class="hljs-comment">// make sure this is a real pouch error</span>
-    <span class="hljs-keyword">if</span> (!(e || e.error)) <span class="hljs-keyword">throw</span> e;
+    <span class="hljs-keyword">if</span> (!e) <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> LazyError;
+    <span class="hljs-keyword">if</span> (!e.error || e <span class="hljs-keyword">instanceof</span> LazyError) <span class="hljs-keyword">throw</span> e;
 
     <span class="hljs-keyword">var</span> nerr = <span class="hljs-keyword">new</span> LazyError(<span class="hljs-string">"POUCH_ERROR"</span>, e.message);
     nerr.error = <span class="hljs-literal">true</span>; <span class="hljs-comment">// keep it consistent</span>

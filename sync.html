@@ -20,13 +20,18 @@
             <div id="jump_page">
               
                 
+                <a class="source" href="index.html">
+                  README.md
+                </a>
+              
+                
                 <a class="source" href="document.html">
                   document.js
                 </a>
               
                 
-                <a class="source" href="index.html">
-                  index.js
+                <a class="source" href="lazybones.html">
+                  lazybones.js
                 </a>
               
                 
@@ -85,7 +90,7 @@
     debug = <span class="hljs-built_in">require</span>(<span class="hljs-string">"debug"</span>)(<span class="hljs-string">"lazybones:sync"</span>),
     utils = <span class="hljs-built_in">require</span>(<span class="hljs-string">"./utils"</span>),
     Document = <span class="hljs-built_in">require</span>(<span class="hljs-string">"./document"</span>),
-    Database = <span class="hljs-built_in">require</span>(<span class="hljs-string">"./"</span>),
+    Database = <span class="hljs-built_in">require</span>(<span class="hljs-string">"./lazybones"</span>),
     Promise = <span class="hljs-built_in">require</span>(<span class="hljs-string">"bluebird"</span>);
 
 <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">noop</span><span class="hljs-params">()</span></span>{}
@@ -122,10 +127,10 @@
             <span class="hljs-keyword">case</span> <span class="hljs-string">"read"</span>:
                 <span class="hljs-comment">// fetch single if document</span>
                 <span class="hljs-keyword">if</span> (isdoc) {
-                    pouch_opts = _.defaults(_.pick(options, utils.pouchOptionKeys.get), {
+                    pouch_opts = _.extend({
                         conflicts: <span class="hljs-literal">true</span>,
                         attachments: <span class="hljs-literal">false</span>
-                    });
+                    }, options);
 
                     <span class="hljs-keyword">return</span> Promise.cast(db.pouch.get(id, pouch_opts)).tap(options.success);
                 }
@@ -135,7 +140,7 @@
                     pouch_opts = _.extend({
                         conflicts: <span class="hljs-literal">true</span>,
                         attachments: <span class="hljs-literal">false</span>
-                    }, _.pick(options, utils.pouchOptionKeys.allDocs), {
+                    }, options, {
                         include_docs: <span class="hljs-literal">true</span> <span class="hljs-comment">// always must include the full document</span>
                     });
 

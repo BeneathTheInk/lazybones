@@ -20,13 +20,18 @@
             <div id="jump_page">
               
                 
+                <a class="source" href="index.html">
+                  README.md
+                </a>
+              
+                
                 <a class="source" href="document.html">
                   document.js
                 </a>
               
                 
-                <a class="source" href="index.html">
-                  index.js
+                <a class="source" href="lazybones.html">
+                  lazybones.js
                 </a>
               
                 
@@ -51,476 +56,39 @@
         <li id="section-1">
             <div class="annotation">
               
-              <div class="pilwrap ">
+              <div class="pilwrap for-h1">
                 <a class="pilcrow" href="#section-1">&#182;</a>
               </div>
-              
-            </div>
-            
-        </li>
-        
-        
-        <li id="section-2">
-            <div class="annotation">
-              
-              <div class="pilwrap for-h1">
-                <a class="pilcrow" href="#section-2">&#182;</a>
-              </div>
               <h1>Lazybones</h1>
-<p>Lazybones is a modified Backbone collection that integrates with PouchDB. By combining Backbone’s object-oriented approach with PouchDB’s super flexible databases, Lazybones provides a highly-functional API for storing and manipulating data in the browser and Node.js.</p><p>A deeper understanding of <a href="http://backbonejs.org">Backbone</a> is recommended since many of Lazybones methods and concepts are inherited directly from Backbone Collection. Knowledge of PouchDB’s API is also recommended, but not required to use Lazybones.</p>
-            </div>
-            
-            <div class="content"><div class='highlight'><pre><span class="hljs-keyword">var</span> _ = <span class="hljs-built_in">require</span>(<span class="hljs-string">"underscore"</span>),
-    Backbone = <span class="hljs-built_in">require</span>(<span class="hljs-string">"backbone"</span>),
-    PouchDB = <span class="hljs-built_in">require</span>(<span class="hljs-string">"pouchdb"</span>),
-    utils = <span class="hljs-built_in">require</span>(<span class="hljs-string">"./utils"</span>),
-    Promise = <span class="hljs-built_in">require</span>(<span class="hljs-string">"bluebird"</span>);</pre></div></div>
-            
-        </li>
-        
-        
-        <li id="section-3">
-            <div class="annotation">
-              
-              <div class="pilwrap for-h2">
-                <a class="pilcrow" href="#section-3">&#182;</a>
-              </div>
-              <h2>Constructor</h2>
-<p>To use Lazybones, create a new database instance with a name:</p><pre><code class="lang-javascript"><span class="hljs-keyword">var</span> db = <span class="hljs-keyword">new</span> Lazybones(<span class="hljs-string">"testdb"</span>);
+<p>Lazybones is a modified Backbone collection that integrates with PouchDB. By combining Backbone’s object-oriented approach with PouchDB’s super flexible databases, Lazybones provides a highly-functional API for storing and manipulating data in the browser and Node.js.</p><h2>Install</h2>
+<p>Download the latest version from our <a href="https://github.com/BeneathTheInk/lazybones/releases">release page</a> and use via a script tag. The variable <code>Lazybones</code> will be attached to <code>window</code>.</p><pre><code class="lang-html"><span class="hljs-tag">&lt;<span class="hljs-title">script</span> <span class="hljs-attribute">type</span>=<span class="hljs-value">"text/javascript"</span> <span class="hljs-attribute">src</span>=<span class="hljs-value">"lazybones.js"</span>&gt;</span><span class="javascript"></span><span class="hljs-tag">&lt;/<span class="hljs-title">script</span>&gt;</span>
 </code></pre>
-<p>Databases are always created with an associated PouchDB instance. If PouchDB needs to be specially initialized, instances can be created ahead of time and passed in via <code>options.pouch</code>. Otherwise, the Lazybones constructor will create a new PouchDB instance from the <code>name</code> argument.</p><h4>Arguments</h4>
-<ul>
-<li><strong>name</strong> <em>string</em> - The name of the Pouch database to connect to. This can either be a local database name (indexeddb or leveldb) or a remote CouchDB url. This argument is required and a <code>MISSING_ID</code> error is thrown when not provided.</li>
-<li><strong>options</strong> <em>object; optional</em> - An object of options to initiate the database with. This variable is passed directly to the <code>Backbone.Collection</code> constructor.<ul>
-<li><strong>options.pouch</strong> <em>object | PouchDB</em> - An instance of PouchDB or an object of options to pass to the PouchDB constructor.</li>
-</ul>
-</li>
-</ul>
+<p>If using Browserify or Node.js, you can install via NPM and use via <code>require(&quot;lazybones&quot;)</code>.</p><pre><code class="lang-shell">$ npm install lazybones
+</code></pre>
+<h2>Basic Usage</h2>
+<p>Lazybones is a modified Backbone collection with a custom sync function that allows for fetching and writing to a Pouch database. To begin using Lazybones, you only need the name of the database you are using:</p><pre><code class="lang-javascript"><span class="hljs-keyword">var</span> db = <span class="hljs-keyword">new</span> Lazybones(<span class="hljs-string">"mydb"</span>);
+</code></pre>
+<p>This will return an empty backbone collection attached to a newly initiated PouchDB instance. This instance if available via <code>db.pouch</code> although you should rarely need access to it.</p><p>At this point you can load in documents from the database into memory. The easiest way to do this is via a normal fetch:</p><pre><code class="lang-javascript">db.fetch().then(<span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> </span>{
+   <span class="hljs-comment">// collection now contains everything in PouchDB</span>
+});
+</code></pre>
+<p>Using fetch, you can also retrieve specific subsets of documents, for example only those in a specific CouchDB view. Just add <code>filter: &quot;myview&quot;</code> to fetch options. All the other standard Backbone sync options are available too.</p><p>Lazybones also provides a method for continuously listening to changes in the database and replicating them to the in-memory documents:</p><pre><code class="lang-javascript">db.connect();
 
+<span class="hljs-comment">// later</span>
+db.disconnect();
+</code></pre>
+<p>When <code>.connect()</code> is called, the database will listen to the database changes feed and automatically push changes to documents in the collection. This means that <code>connect</code>, in a lot of ways, is like fetch with the exception that it continually updates the documents.</p><h2>Documentation</h2>
+<p>We have <a href="http://beneaththeink.github.io/lazybones/lazybones.html">pretty HTML docs</a> with inline source code hosted on Github Pages. This documentation is generated from block-level comments in the code using <a href="https://github.com/BeneathTheInk/doxxo">Doxxo</a>, so you can also build them locally.</p><pre><code class="lang-bash">npm run build-docs
+</code></pre>
+<h2>How to Build from Scratch</h2>
+<p>Lazybones uses Grunt to build a Browserify bundle from the original source found in <code>lib/</code>. When the command below completes, the compiled source will be saved to <code>dist/</code> directory.</p><pre><code class="lang-bash">npm install &amp;&amp; grunt
+</code></pre>
+<p>If you don’t the Grunt cli tools installed globally, run <code>npm install -g grunt-cli</code> before running that command.</p><h2>Running the Unit Tests</h2>
+<p>Lazybones has several unit tests written for Node.js and the browser. Before running tests, install all test dependencies:</p><pre><code>npm install
+</code></pre><p>To get tests running on Node.js, run:</p><pre><code>npm test
+</code></pre><p>To run tests in the browser, start a test server with this command. When the server is running, navigate your browser to <a href="http://localhost:8000">http://localhost:8000</a>.</p><pre><code>npm run dev
+</code></pre>
             </div>
-            
-            <div class="content"><div class='highlight'><pre><span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">Lazybones</span><span class="hljs-params">(name, opts)</span> </span>{
-    opts = opts || {};
-
-    <span class="hljs-comment">// check the name variable</span>
-    <span class="hljs-keyword">if</span> (!_.isString(name) || name === <span class="hljs-string">""</span>) {
-        <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> utils.LazyError(<span class="hljs-string">"MISSING_ID"</span>, <span class="hljs-string">"Expecting non-empty string for database id."</span>);
-    }
-
-    <span class="hljs-comment">// create PouchDB instance from options</span>
-    <span class="hljs-keyword">this</span>.pouch = opts.pouch <span class="hljs-keyword">instanceof</span> PouchDB ? opts.pouch : <span class="hljs-keyword">new</span> PouchDB(name, opts.pouch);
-
-    <span class="hljs-comment">// set the database on the object for easy access</span>
-    <span class="hljs-built_in">Object</span>.defineProperty(<span class="hljs-keyword">this</span>, <span class="hljs-string">"name"</span>, {
-        value: name,
-        writeable: <span class="hljs-literal">false</span>,
-        configurable: <span class="hljs-literal">true</span>,
-        enumerable: <span class="hljs-literal">true</span>
-    });
-
-    <span class="hljs-comment">// finish initialization as an empty collection.</span>
-    Backbone.Collection.call(<span class="hljs-keyword">this</span>, [], opts);
-}
-
-<span class="hljs-comment">// export immediately so recursive dependents get the correct value</span>
-<span class="hljs-built_in">module</span>.exports = Lazybones;
-
-<span class="hljs-comment">// Lazybones is an extension Backbone.Collection </span>
-Lazybones.prototype = <span class="hljs-built_in">Object</span>.create(Backbone.Collection.prototype);
-
-<span class="hljs-comment">// the current version</span>
-Lazybones.VERSION = <span class="hljs-string">"0.1.5"</span>;</pre></div></div>
-            
-        </li>
-        
-        
-        <li id="section-4">
-            <div class="annotation">
-              
-              <div class="pilwrap for-h2">
-                <a class="pilcrow" href="#section-4">&#182;</a>
-              </div>
-              <h2>Static Methods &amp; Properties</h2>
-<ul>
-<li><strong>Lazybones.utils</strong> <em>object</em> - Lazybones and PouchDB utility methods.</li>
-<li><strong>Lazybones.Document</strong> <em>function</em> - The Document constructor, which is a subclass of <code>Backbone.Model</code>.</li>
-<li><strong>Lazybones.sync</strong> <em>function</em> - The Lazybones sync method. This replaces <code>Backbone.sync</code>.</li>
-<li><strong>Lazybones.extend</strong> <em>function</em> - Creates a subclass of Lazybones. This is the same method that Backbone uses.</li>
-</ul>
-
-            </div>
-            
-            <div class="content"><div class='highlight'><pre><span class="hljs-comment">// load in other parts before setting up class methods</span>
-Lazybones.utils = utils;
-<span class="hljs-keyword">var</span> Document = Lazybones.Document = <span class="hljs-built_in">require</span>(<span class="hljs-string">"./document"</span>);
-Lazybones.sync = <span class="hljs-built_in">require</span>(<span class="hljs-string">"./sync"</span>);
-Lazybones.extend = Backbone.Collection.extend;</pre></div></div>
-            
-        </li>
-        
-        
-        <li id="section-5">
-            <div class="annotation">
-              
-              <div class="pilwrap for-h2">
-                <a class="pilcrow" href="#section-5">&#182;</a>
-              </div>
-              <h2>Instance Properties</h2>
-<ul>
-<li><strong>db.name</strong> <em>string; non-writeable</em> - The database name passed in to the constructor is set as a non-writeable property on the instance to make easy to access.</li>
-<li><strong>db.model</strong> <em>function</em> - The model constructor to use when creating documents from data. This defaults to <code>Lazybones.Document</code>, but can be any subclass of <code>Backbone.Model</code> or a function which returns new model instances.</li>
-</ul>
-<h2>Instance Methods</h2>
-<p>These methods are addition to methods provided by <code>Backbone.Collection</code>.</p>
-            </div>
-            
-            <div class="content"><div class='highlight'><pre>_.extend(Lazybones.prototype, {
-
-    <span class="hljs-comment">// add externally declared methods</span>
-    model: Document,
-    parse: utils.parse,
-    sync: <span class="hljs-built_in">require</span>(<span class="hljs-string">"./sync"</span>),</pre></div></div>
-            
-        </li>
-        
-        
-        <li id="section-6">
-            <div class="annotation">
-              
-              <div class="pilwrap for-h3">
-                <a class="pilcrow" href="#section-6">&#182;</a>
-              </div>
-              <h3>connect()</h3>
-<p>Listens to the PouchDB changes feed and replicates any changes to the in-memory documents. By default, the changes are “live” meaning that future changes will listened for. Use the <code>.disconnect()</code> to stop a live connection.</p><p><code>this</code> is returned for method chaining.</p><h4>Arguments</h4>
-<ul>
-<li><strong>options</strong> <em>object; optional</em> - An object of properties that are passed to <code>pouch.changes()</code>. All PouchDB changes properties are allowed, except for <code>include_docs</code> which is set to true. Below are the properties with default values. Please see the <a href="http://pouchdb.com/api.html#changes">PocuhDB documentation</a> for the remaining options.<ul>
-<li><strong>options.attachments</strong> <em>boolean</em> - Whether or not to include attachment data in the request. If <code>true</code>, attachments will be accessible via the <code>_attachments</code> attribute. Default value is <code>false</code>.</li>
-<li><strong>options.conflicts</strong> <em>boolean</em> - Whether or not to include conflicting revision ids in the <code>_conflicts</code> attribute. Default value is <code>true</code>.</li>
-<li><strong>options.returnDocs</strong> <em>boolean</em> - Tells PouchDB to not return all the documents on the <code>complete</code> event, preventing a lot of extra memory usage. Default value is <code>false</code>.</li>
-<li><strong>options.live</strong> <em>boolean</em> - The database will continuously listen for changes, keeping the in-memory documents in sync with those in the database. Setting this to <code>false</code> will result in the database disconnecting as soon as it is has been caught up. Default value is <code>true</code>.</li>
-</ul>
-</li>
-</ul>
-
-            </div>
-            
-            <div class="content"><div class='highlight'><pre>    connect: <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(options)</span> </span>{
-        <span class="hljs-keyword">var</span> self = <span class="hljs-keyword">this</span>;
-
-        <span class="hljs-comment">// always disconnect first</span>
-        <span class="hljs-keyword">this</span>.disconnect();
-
-        <span class="hljs-comment">// create/update function</span>
-        <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">onChange</span><span class="hljs-params">(row)</span> </span>{
-            self.add(row.doc, { merge: <span class="hljs-literal">true</span>, database: self });
-        }
-
-        <span class="hljs-comment">// uptodate event should only be called once per connection</span>
-        <span class="hljs-keyword">var</span> onUpToDate = _.once(<span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(info)</span> </span>{
-            self.trigger(<span class="hljs-string">"uptodate"</span>, info);
-        });
-
-        <span class="hljs-comment">// the listener</span>
-        <span class="hljs-keyword">var</span> listener =
-        <span class="hljs-keyword">this</span>._pouchChange = <span class="hljs-keyword">this</span>.pouch.changes(_.extends({
-            attachments: <span class="hljs-literal">false</span>,
-            conflicts: <span class="hljs-literal">true</span>,
-            returnDocs: <span class="hljs-literal">false</span>,
-            live: <span class="hljs-literal">true</span>
-        }, _.pick(options, utils.pouchOptionKeys.changes), {
-            include_docs: <span class="hljs-literal">true</span>
-        }))
-
-        <span class="hljs-comment">// listen for uptodate</span>
-        .on(<span class="hljs-string">"uptodate"</span>, onUpToDate)
-        .on(<span class="hljs-string">"complete"</span>, onUpToDate) <span class="hljs-comment">// when live = false</span>
-
-        <span class="hljs-comment">// creates and updates are handled the same</span>
-        .on(<span class="hljs-string">"create"</span>, onChange)
-        .on(<span class="hljs-string">"update"</span>, onChange)
-
-        <span class="hljs-comment">// remove everything marked as a delete</span>
-        .on(<span class="hljs-string">"delete"</span>, <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(row)</span> </span>{
-            self.remove(row.id);
-        });
-
-        <span class="hljs-comment">// catch any terminating errors</span>
-        Promise.cast(listener.catch(<span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(e)</span> </span>{
-            self.trigger(<span class="hljs-string">"error"</span>, e);
-        }))
-
-        .then(<span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(resp)</span> </span>{
-            <span class="hljs-comment">// clean up</span>
-            self.disconnect();
-
-            <span class="hljs-comment">// announce disconnect</span>
-            self.trigger(<span class="hljs-string">"disconnect"</span>, listener, resp);
-        });
-
-        <span class="hljs-comment">// annouce the connection</span>
-        <span class="hljs-keyword">this</span>.trigger(<span class="hljs-string">"connect"</span>, listener);
-
-        <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
-    },</pre></div></div>
-            
-        </li>
-        
-        
-        <li id="section-7">
-            <div class="annotation">
-              
-              <div class="pilwrap for-h3">
-                <a class="pilcrow" href="#section-7">&#182;</a>
-              </div>
-              <h3>disconnect()</h3>
-<p>Stops the database from listening to the PouchDB changes feed. This method has no effect if the database is not currently connected.</p><p><code>this</code> is returned for method chaining.</p>
-            </div>
-            
-            <div class="content"><div class='highlight'><pre>    disconnect: <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> </span>{
-        <span class="hljs-comment">// only disconnect if connected</span>
-        <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>._pouchChange) {
-            <span class="hljs-keyword">this</span>._pouchChange.cancel();
-            <span class="hljs-keyword">delete</span> <span class="hljs-keyword">this</span>._pouchChange;
-        }
-
-        <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
-    },</pre></div></div>
-            
-        </li>
-        
-        
-        <li id="section-8">
-            <div class="annotation">
-              
-              <div class="pilwrap for-h3">
-                <a class="pilcrow" href="#section-8">&#182;</a>
-              </div>
-              <h3>destroy()</h3>
-<p>Destroys the underlying PouchDB database. This will keep all the existing documents in-memory, so call <code>db.reset()</code> to remove those as well. The Lazybones instance should not be used after this method has been called.</p><p>This method returns a promise that is resolved when the database is destroyed.</p>
-            </div>
-            
-            <div class="content"><div class='highlight'><pre>    destroy: <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> </span>{
-        <span class="hljs-comment">// resolves immediately if currently destroying</span>
-        <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>._destroying) <span class="hljs-keyword">return</span> Promise.bind(<span class="hljs-keyword">this</span>);
-
-        <span class="hljs-comment">// set database destroying state</span>
-        <span class="hljs-keyword">this</span>._destroying = <span class="hljs-literal">true</span>;
-
-        <span class="hljs-comment">// disconnect live connection</span>
-        <span class="hljs-keyword">this</span>.disconnect();
-
-        <span class="hljs-comment">// clean up the write queue</span>
-        <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>._cancelWrites()
-
-        <span class="hljs-comment">// destroy the pouch database</span>
-        .then(<span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> </span>{
-            <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>.pouch.destroy();
-        })
-
-        <span class="hljs-comment">// clean up state</span>
-        .finally(<span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> </span>{
-            <span class="hljs-keyword">delete</span> <span class="hljs-keyword">this</span>._destroying;
-        });
-    },</pre></div></div>
-            
-        </li>
-        
-        
-        <li id="section-9">
-            <div class="annotation">
-              
-              <div class="pilwrap for-h3">
-                <a class="pilcrow" href="#section-9">&#182;</a>
-              </div>
-              <h3>_pushWrite()</h3>
-<p>A private method that adds a document insert, update, or delete request to the internal write queue. If the document is already in the queue, nothing happens.</p><p>This method returns a promise that is resolved when the write is completed.</p><h4>Arguments</h4>
-<ul>
-<li><strong>doc</strong> <em>object</em> - A plain javascript object to write to the database. This should have at least <code>_id</code> property.</li>
-<li><strong>_delete</strong> <em>boolean</em> - A flag to mark this write as a delete instead of an insert or update. Defaults to <code>false</code>.</li>
-</ul>
-
-            </div>
-            
-            <div class="content"><div class='highlight'><pre>    _pushWrite: <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(doc, _delete)</span> </span>{
-        <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>._writeQueue == <span class="hljs-literal">null</span>) <span class="hljs-keyword">this</span>._writeQueue = {};
-        <span class="hljs-keyword">var</span> self = <span class="hljs-keyword">this</span>;
-
-        <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> Promise(<span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(resolve, reject)</span> </span>{
-            <span class="hljs-comment">// if the database is being destroyed we can reject with a cancel</span>
-            <span class="hljs-keyword">if</span> (self._destroying) <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> utils.LazyError(<span class="hljs-string">"WRITE_CANCELLED"</span>);
-
-            <span class="hljs-comment">// verify document</span>
-            <span class="hljs-keyword">if</span> (!_.has(doc, <span class="hljs-string">"_id"</span>)) <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> utils.LazyError(<span class="hljs-string">"MISSING_ID"</span>);
-
-            <span class="hljs-comment">// if deleting, transform the document</span>
-            <span class="hljs-keyword">if</span> (_delete) {
-                doc = _.pick(doc, <span class="hljs-string">"_id"</span>, <span class="hljs-string">"_rev"</span>);
-                <span class="hljs-keyword">if</span> (!doc._rev) <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> utils.LazyError(<span class="hljs-string">"MISSING_REVISION"</span>);
-                doc._deleted = <span class="hljs-literal">true</span>;
-            }
-
-            <span class="hljs-comment">// we only overwrite if the existing doc isn't marked as deleted</span>
-            <span class="hljs-keyword">if</span> (!doc._deleted) {
-                <span class="hljs-keyword">var</span> existing = self._writeQueue[doc._id];
-                <span class="hljs-keyword">if</span> (existing &amp;&amp; existing._deleted) {
-                    <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> utils.LazyError(<span class="hljs-string">"ILLEGAL_UPDATE"</span>, <span class="hljs-string">"Refusing to update a queued deleted document."</span>);
-                }
-            }
-            
-            <span class="hljs-comment">// add to the queue</span>
-            self._writeQueue[doc._id] = {
-                doc: doc,
-                resolve: resolve,
-                reject: reject
-            };
-
-            <span class="hljs-comment">// invalidate the queue</span>
-            self._invalidateWrites();
-        })
-
-        .bind(<span class="hljs-keyword">this</span>)
-        .catch(utils.transformPouchError);
-    },</pre></div></div>
-            
-        </li>
-        
-        
-        <li id="section-10">
-            <div class="annotation">
-              
-              <div class="pilwrap for-h3">
-                <a class="pilcrow" href="#section-10">&#182;</a>
-              </div>
-              <h3>_flushWrites()</h3>
-<p>A private method that pushes the first 100 requests in the write queue to the database. When finished, this calls <code>db._invalidateWrites()</code> to continue flushing any remaining requests.</p><p>This method returns a promise that is resolved when the requests pulled from the queue on this flush have all completed.</p>
-            </div>
-            
-            <div class="content"><div class='highlight'><pre>    _flushWrites: <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> </span>{
-        <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>._writeQueue == <span class="hljs-literal">null</span>) <span class="hljs-keyword">this</span>._writeQueue = {};
-
-        <span class="hljs-comment">// wrapper promise for error catching</span>
-        <span class="hljs-keyword">return</span> Promise.bind(<span class="hljs-keyword">this</span>).then(<span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> </span>{
-            <span class="hljs-keyword">var</span> queue;
-
-            <span class="hljs-comment">// don't flush while flushing</span>
-            <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>._flushing) {
-                <span class="hljs-keyword">this</span>._invalidateWrites();
-                <span class="hljs-keyword">return</span> Promise.bind(<span class="hljs-keyword">this</span>);
-            }
-
-            <span class="hljs-comment">// make sure there are items in the queue</span>
-            queue = <span class="hljs-keyword">this</span>._writeQueue;
-            <span class="hljs-keyword">if</span> (!_.size(queue)) <span class="hljs-keyword">return</span>;
-
-            <span class="hljs-comment">// promise that writes to database</span>
-            <span class="hljs-keyword">return</span> Promise.bind(<span class="hljs-keyword">this</span>).then(<span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> </span>{
-                <span class="hljs-keyword">var</span> ids, docs;
-
-                <span class="hljs-comment">// enable flush state</span>
-                <span class="hljs-keyword">this</span>._flushing = <span class="hljs-literal">true</span>;
-
-                <span class="hljs-comment">// extract first 100 ids</span>
-                ids = <span class="hljs-built_in">Object</span>.keys(queue).slice(<span class="hljs-number">0</span>, <span class="hljs-number">100</span>);
-                docs = _.values(_.pick(queue, ids));
-
-                <span class="hljs-comment">// push all the docs at once</span>
-                <span class="hljs-keyword">return</span> Promise.cast(<span class="hljs-keyword">this</span>.pouch.bulkDocs(_.pluck(docs, <span class="hljs-string">"doc"</span>))).bind(<span class="hljs-keyword">this</span>)
-
-                <span class="hljs-comment">// catch any immediate pouch errors</span>
-                .catch(utils.transformPouchError)
-
-                <span class="hljs-comment">// return result async</span>
-                .map(<span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(result, index)</span> </span>{
-                    <span class="hljs-comment">// resolve or reject depending on result</span>
-                    docs[index][result.ok ? <span class="hljs-string">"resolve"</span> : <span class="hljs-string">"reject"</span>](result);
-
-                    <span class="hljs-comment">// remove from the queue if resolution was successful</span>
-                    <span class="hljs-keyword">delete</span> queue[ids[index]];
-                    
-                    <span class="hljs-comment">// force it async so we can't lock up the browser</span>
-                    <span class="hljs-keyword">return</span> utils.asyncDefer();
-                }, { concurrency: <span class="hljs-number">20</span> })
-
-                <span class="hljs-comment">// after a successful write, invalidate the queue again</span>
-                .then(<span class="hljs-keyword">this</span>._invalidateWrites)
-            })
-
-            <span class="hljs-comment">// always, always reset state</span>
-            .finally(<span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> </span>{
-                <span class="hljs-keyword">delete</span> <span class="hljs-keyword">this</span>._flushing;
-                <span class="hljs-keyword">this</span>.trigger(<span class="hljs-string">"flush"</span>);
-            });
-
-        })
-
-        <span class="hljs-comment">// catch any major errors</span>
-        .catch(<span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(e)</span> </span>{
-            <span class="hljs-built_in">console</span>.log(e);
-            <span class="hljs-keyword">this</span>.trigger(<span class="hljs-string">"error"</span>, e);
-            <span class="hljs-keyword">throw</span> e;
-        });
-    },</pre></div></div>
-            
-        </li>
-        
-        
-        <li id="section-11">
-            <div class="annotation">
-              
-              <div class="pilwrap for-h3">
-                <a class="pilcrow" href="#section-11">&#182;</a>
-              </div>
-              <h3>_invalidateWrites()</h3>
-<p>A private method that sets up a timeout that calls <code>db._flushWrites()</code> after 200ms. If a timeout is already running, this method has no effect.</p><p><code>this</code> is returned for method chaining.</p>
-            </div>
-            
-            <div class="content"><div class='highlight'><pre>    _invalidateWrites: <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> </span>{
-        <span class="hljs-keyword">var</span> self = <span class="hljs-keyword">this</span>;
-
-        <span class="hljs-comment">// only set timeout if doesn't exist</span>
-        <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>._writesTimeout == <span class="hljs-literal">null</span>) {
-            <span class="hljs-keyword">this</span>._writesTimeout = setTimeout(<span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> </span>{
-                <span class="hljs-keyword">delete</span> self._writesTimeout;
-                self._flushWrites();
-            }, <span class="hljs-number">200</span>);
-        }
-        
-        <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
-    },</pre></div></div>
-            
-        </li>
-        
-        
-        <li id="section-12">
-            <div class="annotation">
-              
-              <div class="pilwrap for-h3">
-                <a class="pilcrow" href="#section-12">&#182;</a>
-              </div>
-              <h3>_cancelWrites()</h3>
-<p>A private method that waits for any current writes to finish and then cancels all pending requests in the write queue with a <code>WRITE_CANCELLED</code> error. This ensures the write queue is empty before the database is destroyed.</p><p>This method returns a promise that is resolved when all writes are flushed or canceled.</p>
-            </div>
-            
-            <div class="content"><div class='highlight'><pre>    _cancelWrites: <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> </span>{
-        <span class="hljs-keyword">var</span> self = <span class="hljs-keyword">this</span>;
-
-        <span class="hljs-comment">// wait for the database to finish any current writes</span>
-        <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> Promise(<span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(resolve, reject)</span> </span>{
-            <span class="hljs-keyword">if</span> (!self._flushing) resolve();
-            <span class="hljs-keyword">else</span> self.once(<span class="hljs-string">"flush"</span>, resolve);
-        }).bind(<span class="hljs-keyword">this</span>)
-
-        <span class="hljs-comment">// clean out all writes remaining in the queue</span>
-        .then(<span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> </span>{
-            _.each(<span class="hljs-keyword">this</span>._writeQueue, <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(d)</span> </span>{
-                d.reject(<span class="hljs-keyword">new</span> utils.LazyError(<span class="hljs-string">"WRITE_CANCELLED"</span>));
-            });
-
-            <span class="hljs-keyword">this</span>._writeQueue = {};
-        });
-    }
-
-});</pre></div></div>
             
         </li>
         
