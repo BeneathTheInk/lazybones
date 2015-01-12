@@ -49,7 +49,7 @@ When `.connect()` is called, the database will listen to the database changes fe
 
 ## Documentation
 
-For quick documentation on each function, please see the inline comments in the source code. These comments are in [Doxxo](https://github.com/BeneathTheInk/doxxo) format, so you can also build them for a prettier experience.
+We have [pretty HTML docs](http://beneaththeink.github.io/lazybones/lazybones.html) with inline source code hosted on Github Pages. This documentation is generated from block-level comments in the code using [Doxxo](https://github.com/BeneathTheInk/doxxo), so you can also build them locally.
 
 ```bash
 npm run build-docs
