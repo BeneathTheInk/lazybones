@@ -43,8 +43,15 @@ describe("Database", function() {
 	});
 
 	it("destroys a database", function(done) {
-		var db = new Lazybones("testdb");
-		db.destroy().then(function() { done(); }, done);
+		var db = new Lazybones("testdb"),
+			seen = false;
+
+		db.once("destroyed", function() { seen = true; });
+
+		db.destroy().then(function() {
+			expect(seen).to.be.ok;
+			done();
+		}).catch(done);
 	});
 
 	it("can create subclass from Database class", function() {
