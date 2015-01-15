@@ -115,6 +115,12 @@
     <span class="hljs-comment">// create PouchDB instance from options</span>
     <span class="hljs-keyword">this</span>.pouch = opts.pouch <span class="hljs-keyword">instanceof</span> PouchDB ? opts.pouch : <span class="hljs-keyword">new</span> PouchDB(name, opts.pouch);
 
+    <span class="hljs-comment">// mimic destroyed event</span>
+    <span class="hljs-keyword">this</span>.pouch.on(<span class="hljs-string">"destroyed"</span>, <span class="hljs-keyword">this</span>.trigger.bind(<span class="hljs-keyword">this</span>, <span class="hljs-string">"destroyed"</span>));
+
+    <span class="hljs-comment">// capture error events so they don't ruin the party</span>
+    <span class="hljs-keyword">this</span>.pouch.on(<span class="hljs-string">"error"</span>, <span class="hljs-keyword">this</span>.trigger.bind(<span class="hljs-keyword">this</span>, <span class="hljs-string">"error"</span>));
+
     <span class="hljs-comment">// set the database name on the object for easy access</span>
     <span class="hljs-built_in">Object</span>.defineProperty(<span class="hljs-keyword">this</span>, <span class="hljs-string">"name"</span>, {
         value: name,
@@ -134,7 +140,7 @@
 Lazybones.prototype = <span class="hljs-built_in">Object</span>.create(Backbone.Collection.prototype);
 
 <span class="hljs-comment">// the current version</span>
-Lazybones.VERSION = <span class="hljs-string">"0.1.5"</span>;</pre></div></div>
+Lazybones.VERSION = <span class="hljs-string">"0.1.7"</span>;</pre></div></div>
             
         </li>
         
@@ -158,6 +164,7 @@ Lazybones.VERSION = <span class="hljs-string">"0.1.5"</span>;</pre></div></div>
             <div class="content"><div class='highlight'><pre><span class="hljs-comment">// load in other parts before setting up class methods</span>
 Lazybones.utils = utils;
 <span class="hljs-keyword">var</span> Document = Lazybones.Document = <span class="hljs-built_in">require</span>(<span class="hljs-string">"./document"</span>);
+Lazybones.Backbone = Backbone;
 Lazybones.sync = <span class="hljs-built_in">require</span>(<span class="hljs-string">"./sync"</span>);
 Lazybones.extend = Backbone.Collection.extend;</pre></div></div>
             
@@ -196,7 +203,7 @@ Lazybones.extend = Backbone.Collection.extend;</pre></div></div>
                 <a class="pilcrow" href="#section-6">&#182;</a>
               </div>
               <h3>connect()</h3>
-<p>Listens to the PouchDB changes feed and replicates any changes to the in-memory documents. By default, the changes are “live” meaning that future changes will listened for. Use <code>db.disconnect()</code> to stop a live connection.</p><p><code>this</code> is returned for method chaining.</p><h4>Arguments</h4>
+<p>Listens to the PouchDB changes feed and sets any changes on the in-memory <a href="document.html">Documents</a>. By default, the changes are “live” meaning that changes will be listened for continuously. Use <code>db.disconnect()</code> to stop a live connection.</p><p><code>this</code> is returned for method chaining.</p><h4>Arguments</h4>
 <ul>
 <li><strong>options</strong> <em>object; optional</em> - An object of properties that are passed to <code>pouch.changes()</code>. All PouchDB changes properties are allowed, except for <code>include_docs</code> which is set to true. Below are the properties with default values. Please see the <a href="http://pouchdb.com/api.html#changes">PocuhDB documentation</a> for the remaining options.<ul>
 <li><strong>options.attachments</strong> <em>boolean</em> - Whether or not to include attachment data in the request. If <code>true</code>, attachments will be accessible via the <code>_attachments</code> attribute. Default value is <code>false</code>.</li>
@@ -283,7 +290,7 @@ Lazybones.extend = Backbone.Collection.extend;</pre></div></div>
             
             <div class="content"><div class='highlight'><pre>    disconnect: <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> </span>{
         <span class="hljs-comment">// only disconnect if connected</span>
-        <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>._pouchChange) {
+        <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>.isConnected()) {
             <span class="hljs-keyword">this</span>._pouchChange.cancel();
             <span class="hljs-keyword">delete</span> <span class="hljs-keyword">this</span>._pouchChange;
         }
@@ -300,8 +307,25 @@ Lazybones.extend = Backbone.Collection.extend;</pre></div></div>
               <div class="pilwrap for-h3">
                 <a class="pilcrow" href="#section-8">&#182;</a>
               </div>
+              <h3>isConnected()</h3>
+<p>Returns <code>true</code> if the Lazybones instance is actively listening to the PouchDB changes feed.</p>
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    isConnected: <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> </span>{
+        <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>._pouchChange != <span class="hljs-literal">null</span>;
+    },</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-9">
+            <div class="annotation">
+              
+              <div class="pilwrap for-h3">
+                <a class="pilcrow" href="#section-9">&#182;</a>
+              </div>
               <h3>load()</h3>
-<p>A combination of <code>db.fetch()</code> and <code>db.connect()</code>. This will fetch from the database so all the current documents are in-memory, then it begins a live connection that starts from the current update sequence. In this way the database can catch up very quickly, but also respond to future database changes.</p><p>This method returns a promise that is resolved when the database has been fetched and the live replication has started.</p>
+<p>A combination of <code>db.fetch()</code> and <code>db.connect()</code>. This will fetch all the current documents from PouchDB, then it begins listening to the changes feed starting from the current update sequence. In this way, the Lazybones instance can catch up very quickly and efficiently, and also continue to receive future database.</p><p>This method returns a promise that is resolved when the database has been fetched and the live replication has started.</p>
             </div>
             
             <div class="content"><div class='highlight'><pre>    load: <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(options)</span> </span>{
@@ -322,22 +346,22 @@ Lazybones.extend = Backbone.Collection.extend;</pre></div></div>
         </li>
         
         
-        <li id="section-9">
+        <li id="section-10">
             <div class="annotation">
               
               <div class="pilwrap for-h3">
-                <a class="pilcrow" href="#section-9">&#182;</a>
+                <a class="pilcrow" href="#section-10">&#182;</a>
               </div>
               <h3>destroy()</h3>
-<p>Destroys the underlying PouchDB database. This will keep all the existing documents in-memory, so call <code>db.reset()</code> to remove those as well. The Lazybones instance should not be used after this method has been called.</p><p>This method returns a promise that is resolved when the database is destroyed.</p>
+<p>Destroys the underlying PouchDB database. This will keep all the existing documents in-memory, so call <code>db.reset()</code> to remove those as well. The Lazybones instance cannot be used after this method has been called.</p><p>This method returns a promise that is resolved when the database is destroyed.</p>
             </div>
             
             <div class="content"><div class='highlight'><pre>    destroy: <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> </span>{
-        <span class="hljs-comment">// resolves immediately if currently destroying</span>
-        <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>._destroying) <span class="hljs-keyword">return</span> Promise.bind(<span class="hljs-keyword">this</span>);
+        <span class="hljs-comment">// resolves immediately if already destroyed</span>
+        <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>._destroyed) <span class="hljs-keyword">return</span> Promise.bind(<span class="hljs-keyword">this</span>);
 
-        <span class="hljs-comment">// set database destroying state</span>
-        <span class="hljs-keyword">this</span>._destroying = <span class="hljs-literal">true</span>;
+        <span class="hljs-comment">// set database destroyed state</span>
+        <span class="hljs-keyword">this</span>._destroyed = <span class="hljs-literal">true</span>;
 
         <span class="hljs-comment">// disconnect live connection</span>
         <span class="hljs-keyword">this</span>.disconnect();
@@ -348,22 +372,17 @@ Lazybones.extend = Backbone.Collection.extend;</pre></div></div>
         <span class="hljs-comment">// destroy the pouch database</span>
         .then(<span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> </span>{
             <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>.pouch.destroy();
-        })
-
-        <span class="hljs-comment">// clean up state</span>
-        .finally(<span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> </span>{
-            <span class="hljs-keyword">delete</span> <span class="hljs-keyword">this</span>._destroying;
         });
     },</pre></div></div>
             
         </li>
         
         
-        <li id="section-10">
+        <li id="section-11">
             <div class="annotation">
               
               <div class="pilwrap for-h3">
-                <a class="pilcrow" href="#section-10">&#182;</a>
+                <a class="pilcrow" href="#section-11">&#182;</a>
               </div>
               <h3>_pushWrite()</h3>
 <p>A private method that adds a document insert, update, or delete request to the internal write queue. If the document is already in the queue, nothing happens.</p><p>This method returns a promise that is resolved when the write is completed.</p><h4>Arguments</h4>
@@ -418,11 +437,11 @@ Lazybones.extend = Backbone.Collection.extend;</pre></div></div>
         </li>
         
         
-        <li id="section-11">
+        <li id="section-12">
             <div class="annotation">
               
               <div class="pilwrap for-h3">
-                <a class="pilcrow" href="#section-11">&#182;</a>
+                <a class="pilcrow" href="#section-12">&#182;</a>
               </div>
               <h3>_flushWrites()</h3>
 <p>A private method that pushes the first 100 requests in the write queue to the database. When finished, this calls <code>db._invalidateWrites()</code> to continue flushing any remaining requests.</p><p>This method returns a promise that is resolved when the requests pulled from the queue on this flush have all completed.</p>
@@ -497,11 +516,11 @@ Lazybones.extend = Backbone.Collection.extend;</pre></div></div>
         </li>
         
         
-        <li id="section-12">
+        <li id="section-13">
             <div class="annotation">
               
               <div class="pilwrap for-h3">
-                <a class="pilcrow" href="#section-12">&#182;</a>
+                <a class="pilcrow" href="#section-13">&#182;</a>
               </div>
               <h3>_invalidateWrites()</h3>
 <p>A private method that sets up a timeout that calls <code>db._flushWrites()</code> after 200ms. If a timeout is already running, this method has no effect.</p><p><code>this</code> is returned for method chaining.</p>
@@ -524,11 +543,11 @@ Lazybones.extend = Backbone.Collection.extend;</pre></div></div>
         </li>
         
         
-        <li id="section-13">
+        <li id="section-14">
             <div class="annotation">
               
               <div class="pilwrap for-h3">
-                <a class="pilcrow" href="#section-13">&#182;</a>
+                <a class="pilcrow" href="#section-14">&#182;</a>
               </div>
               <h3>_cancelWrites()</h3>
 <p>A private method that waits for any current writes to finish and then cancels all pending requests in the write queue with a <code>WRITE_CANCELLED</code> error. This ensures the write queue is empty before the database is destroyed.</p><p>This method returns a promise that is resolved when all writes are flushed or canceled.</p>
