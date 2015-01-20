@@ -5,7 +5,7 @@
   <title>Document</title>
   <meta http-equiv="content-type" content="text/html; charset=UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
-  <link rel="stylesheet" media="all" href="docco.css" />
+  <link rel="stylesheet" media="all" href="public/main.css" />
 </head>
 <body>
   <div id="container">
@@ -56,20 +56,8 @@
         <li id="section-1">
             <div class="annotation">
               
-              <div class="pilwrap ">
-                <a class="pilcrow" href="#section-1">&#182;</a>
-              </div>
-              
-            </div>
-            
-        </li>
-        
-        
-        <li id="section-2">
-            <div class="annotation">
-              
               <div class="pilwrap for-h1">
-                <a class="pilcrow" href="#section-2">&#182;</a>
+                <a class="pilcrow" href="#section-1">&#182;</a>
               </div>
               <h1>Document</h1>
 <p>Lazybones uses the Document class to represent a single document in the database. This class directly extends <code>Backbone.Model</code> and keeps it more or less true to its original form.</p>
@@ -82,11 +70,11 @@
         </li>
         
         
-        <li id="section-3">
+        <li id="section-2">
             <div class="annotation">
               
               <div class="pilwrap for-h2">
-                <a class="pilcrow" href="#section-3">&#182;</a>
+                <a class="pilcrow" href="#section-2">&#182;</a>
               </div>
               <h2>Constructor</h2>
 <p>To create a new document model, use <code>db.add()</code> on the Lazybones instance. This ensures the document is properly initialized, with correct reference back to the database object.</p><pre><code class="lang-javascript"><span class="hljs-keyword">var</span> model = db.add({ foo: <span class="hljs-string">"bar"</span> });
@@ -121,11 +109,11 @@ Document.prototype = <span class="hljs-built_in">Object</span>.create(Backbone.M
         </li>
         
         
-        <li id="section-4">
+        <li id="section-3">
             <div class="annotation">
               
               <div class="pilwrap for-h2">
-                <a class="pilcrow" href="#section-4">&#182;</a>
+                <a class="pilcrow" href="#section-3">&#182;</a>
               </div>
               <h2>Static Methods &amp; Properties</h2>
 <ul>
@@ -139,11 +127,11 @@ Document.prototype = <span class="hljs-built_in">Object</span>.create(Backbone.M
         </li>
         
         
-        <li id="section-5">
+        <li id="section-4">
             <div class="annotation">
               
               <div class="pilwrap for-h2">
-                <a class="pilcrow" href="#section-5">&#182;</a>
+                <a class="pilcrow" href="#section-4">&#182;</a>
               </div>
               <h2>Instance Properties</h2>
 <p>These properties are in addition to the properties set by <code>Backbone.Model</code>.</p><ul>
@@ -163,11 +151,11 @@ Document.prototype = <span class="hljs-built_in">Object</span>.create(Backbone.M
         </li>
         
         
-        <li id="section-6">
+        <li id="section-5">
             <div class="annotation">
               
               <div class="pilwrap for-h3">
-                <a class="pilcrow" href="#section-6">&#182;</a>
+                <a class="pilcrow" href="#section-5">&#182;</a>
               </div>
               <h3>toJSON()</h3>
 <p>Produces a plain JavaScript object that can be saved directly to PouchDB. Date values are converted to ISO strings. Any keys found in the <code>doc.omitKeys</code> array are removed from the output.</p>
@@ -193,11 +181,11 @@ Document.prototype = <span class="hljs-built_in">Object</span>.create(Backbone.M
         </li>
         
         
-        <li id="section-7">
+        <li id="section-6">
             <div class="annotation">
               
               <div class="pilwrap for-h3">
-                <a class="pilcrow" href="#section-7">&#182;</a>
+                <a class="pilcrow" href="#section-6">&#182;</a>
               </div>
               <h3>isNew()</h3>
 <p>Determines if the document has ever been saved to the database by checking if <code>_rev</code> attribute exists.</p>
@@ -210,11 +198,11 @@ Document.prototype = <span class="hljs-built_in">Object</span>.create(Backbone.M
         </li>
         
         
-        <li id="section-8">
+        <li id="section-7">
             <div class="annotation">
               
               <div class="pilwrap for-h3">
-                <a class="pilcrow" href="#section-8">&#182;</a>
+                <a class="pilcrow" href="#section-7">&#182;</a>
               </div>
               <h3>destroy()</h3>
 <p>Usage is identical to <code>Model#destroy()</code> in Backbone. It is declared here because we must pass the Lazybones reference in via options since the document is removed from the collection before <code>sync()</code> is called.</p>

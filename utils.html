@@ -5,7 +5,7 @@
   <title>Utils</title>
   <meta http-equiv="content-type" content="text/html; charset=UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
-  <link rel="stylesheet" media="all" href="docco.css" />
+  <link rel="stylesheet" media="all" href="public/main.css" />
 </head>
 <body>
   <div id="container">
@@ -56,20 +56,8 @@
         <li id="section-1">
             <div class="annotation">
               
-              <div class="pilwrap ">
-                <a class="pilcrow" href="#section-1">&#182;</a>
-              </div>
-              
-            </div>
-            
-        </li>
-        
-        
-        <li id="section-2">
-            <div class="annotation">
-              
               <div class="pilwrap for-h1">
-                <a class="pilcrow" href="#section-2">&#182;</a>
+                <a class="pilcrow" href="#section-1">&#182;</a>
               </div>
               <h1>Utils</h1>
 <p>These are utility methods used by Lazybones and are accessible via <code>Lazybones.utils</code>.</p>
@@ -82,11 +70,11 @@
         </li>
         
         
-        <li id="section-3">
+        <li id="section-2">
             <div class="annotation">
               
               <div class="pilwrap for-h3">
-                <a class="pilcrow" href="#section-3">&#182;</a>
+                <a class="pilcrow" href="#section-2">&#182;</a>
               </div>
               <h3>uuid()</h3>
 <p>Generates a random UUID. This method is taken directly from PouchDB.</p>
@@ -97,11 +85,11 @@
         </li>
         
         
-        <li id="section-4">
+        <li id="section-3">
             <div class="annotation">
               
               <div class="pilwrap for-h3">
-                <a class="pilcrow" href="#section-4">&#182;</a>
+                <a class="pilcrow" href="#section-3">&#182;</a>
               </div>
               <h3>Promise</h3>
 <p>A direct reference to the Bluebird Promise object.</p>
@@ -112,11 +100,11 @@
         </li>
         
         
-        <li id="section-5">
+        <li id="section-4">
             <div class="annotation">
               
               <div class="pilwrap for-h3">
-                <a class="pilcrow" href="#section-5">&#182;</a>
+                <a class="pilcrow" href="#section-4">&#182;</a>
               </div>
               <h3>parse()</h3>
 <p>Parses raw PouchDB document data by converting any ISO dates into Date objects. This method available on all Document and Lazybones instances.</p><h4>Arguments</h4>
@@ -151,11 +139,11 @@ exports.parse = <span class="hljs-function"><span class="hljs-keyword">function<
         </li>
         
         
-        <li id="section-6">
+        <li id="section-5">
             <div class="annotation">
               
               <div class="pilwrap for-h3">
-                <a class="pilcrow" href="#section-6">&#182;</a>
+                <a class="pilcrow" href="#section-5">&#182;</a>
               </div>
               <h3>asyncDefer()</h3>
 <p>Creates a deferred promise that is not resolved until the next system tick.</p><h4>Arguments</h4>
@@ -174,11 +162,11 @@ exports.parse = <span class="hljs-function"><span class="hljs-keyword">function<
         </li>
         
         
-        <li id="section-7">
+        <li id="section-6">
             <div class="annotation">
               
               <div class="pilwrap for-h3">
-                <a class="pilcrow" href="#section-7">&#182;</a>
+                <a class="pilcrow" href="#section-6">&#182;</a>
               </div>
               <h3>LazyError()</h3>
 <p>A custom error class that all errors thrown by Lazybones are wrapped in.</p><h4>Arguments</h4>
@@ -230,11 +218,11 @@ LazyError.prototype.toString = <span class="hljs-function"><span class="hljs-key
         </li>
         
         
-        <li id="section-8">
+        <li id="section-7">
             <div class="annotation">
               
               <div class="pilwrap for-h4">
-                <a class="pilcrow" href="#section-8">&#182;</a>
+                <a class="pilcrow" href="#section-7">&#182;</a>
               </div>
               <h4>Error Codes</h4>
 <p>These are the error codes used by LazyError and their default messages. Custom error codes can be created by adding to this list.</p>
@@ -242,24 +230,24 @@ LazyError.prototype.toString = <span class="hljs-function"><span class="hljs-key
             
             <div class="content"><div class='highlight'><pre>LazyError.errors = {
     POUCH_ERROR: <span class="hljs-string">"PouchDB had an error."</span>,
-    INVALID_DOCUMENT: <span class="hljs-string">"Expecting a valid document."</span>,
+    INVALID_DOC: <span class="hljs-string">"Expecting a valid document."</span>,
     MISSING_ID: <span class="hljs-string">"Document is missing '_id' attribute."</span>,
-    MISSING_REVISION: <span class="hljs-string">"Document is missing '_rev' attribute."</span>,
-    MISSING_DATABASE: <span class="hljs-string">"Document is missing database reference."</span>,
+    MISSING_REV: <span class="hljs-string">"Document is missing '_rev' attribute."</span>,
+    MISSING_DB: <span class="hljs-string">"Document is missing database reference."</span>,
     ILLEGAL_UPDATE: <span class="hljs-string">"Refusing to update this document."</span>,
     WRITE_CANCELLED: <span class="hljs-string">"Database write was canceled."</span>,
-    DATABASE_DESTROYED: <span class="hljs-string">"Database has been destroyed."</span>,
+    DESTROY_DB: <span class="hljs-string">"Database is already in the process of being destroyed."</span>,
     UNKNOWN_ERROR: <span class="hljs-string">"An unknown error occurred."</span>
 }</pre></div></div>
             
         </li>
         
         
-        <li id="section-9">
+        <li id="section-8">
             <div class="annotation">
               
               <div class="pilwrap for-h3">
-                <a class="pilcrow" href="#section-9">&#182;</a>
+                <a class="pilcrow" href="#section-8">&#182;</a>
               </div>
               <h3>transformPouchError()</h3>
 <p>Transforms a PouchError into a LazyError and then throws it. If the passed error is not a PouchError, the original error is thrown without modification.</p><h4>Arguments</h4>

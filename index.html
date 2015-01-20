@@ -5,7 +5,7 @@
   <title>Lazybones</title>
   <meta http-equiv="content-type" content="text/html; charset=UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
-  <link rel="stylesheet" media="all" href="docco.css" />
+  <link rel="stylesheet" media="all" href="public/main.css" />
 </head>
 <body>
   <div id="container">
@@ -60,7 +60,7 @@
                 <a class="pilcrow" href="#section-1">&#182;</a>
               </div>
               <h1>Lazybones</h1>
-<p>Lazybones is a modified Backbone collection that integrates with PouchDB. By combining Backbone’s object-oriented approach with PouchDB’s super flexible databases, Lazybones provides a highly-functional API for storing and manipulating data in the browser and Node.js.</p><h2>Install</h2>
+<p>Lazybones is a modified Backbone collection that integrates with PouchDB. By combining Backbone&#39;s object-oriented approach with PouchDB&#39;s super flexible databases, Lazybones provides a highly-functional API for storing and manipulating data in the browser and Node.js.</p><h2>Install</h2>
 <p>Download the latest version from our <a href="https://github.com/BeneathTheInk/lazybones/releases">release page</a> and use via a script tag. The variable <code>Lazybones</code> will be attached to <code>window</code>.</p><pre><code class="lang-html"><span class="hljs-tag">&lt;<span class="hljs-title">script</span> <span class="hljs-attribute">type</span>=<span class="hljs-value">"text/javascript"</span> <span class="hljs-attribute">src</span>=<span class="hljs-value">"lazybones.js"</span>&gt;</span><span class="javascript"></span><span class="hljs-tag">&lt;/<span class="hljs-title">script</span>&gt;</span>
 </code></pre>
 <p>If using Browserify or Node.js, you can install via NPM and use via <code>require(&quot;lazybones&quot;)</code>.</p><pre><code class="lang-shell">$ npm install lazybones
@@ -83,7 +83,7 @@ db.disconnect();
 <h2>How to Build from Scratch</h2>
 <p>Lazybones uses Grunt to build a Browserify bundle from the original source found in <code>lib/</code>. When the command below completes, the compiled source will be saved to <code>dist/</code> directory.</p><pre><code class="lang-bash">npm install &amp;&amp; grunt
 </code></pre>
-<p>If you don’t the Grunt cli tools installed globally, run <code>npm install -g grunt-cli</code> before running that command.</p><h2>Running the Unit Tests</h2>
+<p>If you don&#39;t the Grunt cli tools installed globally, run <code>npm install -g grunt-cli</code> before running that command.</p><h2>Running the Unit Tests</h2>
 <p>Lazybones has several unit tests written for Node.js and the browser. Before running tests, install all test dependencies:</p><pre><code>npm install
 </code></pre><p>To get tests running on Node.js, run:</p><pre><code>npm test
 </code></pre><p>To run tests in the browser, start a test server with this command. When the server is running, navigate your browser to <a href="http://localhost:8000">http://localhost:8000</a>.</p><pre><code>npm run dev
