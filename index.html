@@ -72,7 +72,7 @@
    <span class="hljs-comment">// collection now contains everything in PouchDB</span>
 });
 </code></pre>
-<p>Using fetch, you can also retrieve specific subsets of documents, for example only those in a specific CouchDB view. Just add <code>filter: &quot;myview&quot;</code> to fetch options. All the other standard Backbone sync options are available too.</p><p>Lazybones also provides a method for continuously listening to changes in the database and replicating them to the in-memory documents:</p><pre><code class="lang-javascript">db.connect();
+<p>Using fetch, you can also retrieve specific subsets of documents, for example only those in a specific CouchDB view. Just add <code>query: &quot;myview&quot;</code> to fetch options. All the other standard Backbone sync options are available too.</p><p>Lazybones also provides a method for continuously listening to changes in the database and replicating them to the in-memory documents:</p><pre><code class="lang-javascript">db.connect();
 
 <span class="hljs-comment">// later</span>
 db.disconnect();

@@ -65,7 +65,10 @@
             
             <div class="content"><div class='highlight'><pre><span class="hljs-keyword">var</span> _ = <span class="hljs-built_in">require</span>(<span class="hljs-string">"underscore"</span>),
     PouchDB = <span class="hljs-built_in">require</span>(<span class="hljs-string">"pouchdb"</span>),
-    Promise = <span class="hljs-built_in">require</span>(<span class="hljs-string">"bluebird"</span>);</pre></div></div>
+    Promise = <span class="hljs-built_in">require</span>(<span class="hljs-string">"bluebird"</span>),
+    Symlink = <span class="hljs-built_in">require</span>(<span class="hljs-string">"backbone-symlink"</span>),
+    sprintf = <span class="hljs-built_in">require</span>(<span class="hljs-string">"sprintf-js"</span>).vsprintf,
+    extend = <span class="hljs-built_in">require</span>(<span class="hljs-string">"backbone"</span>).Model.extend;</pre></div></div>
             
         </li>
         
@@ -103,8 +106,24 @@
         <li id="section-4">
             <div class="annotation">
               
-              <div class="pilwrap for-h3">
+              <div class="pilwrap ">
                 <a class="pilcrow" href="#section-4">&#182;</a>
+              </div>
+              <p>Expose Backbone Symlink and attach two specific utility methods: <code>isBackboneModel()</code> and <code>isBackboneCollection()</code>. These methods are used instead of <code>instanceof</code> because they test the features of an object, not the inheritance.</p>
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>exports.Symlink = Symlink;
+exports.isBackboneModel = Symlink.isBackboneModel;
+exports.isBackboneCollection = Symlink.isBackboneCollection;</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-5">
+            <div class="annotation">
+              
+              <div class="pilwrap for-h3">
+                <a class="pilcrow" href="#section-5">&#182;</a>
               </div>
               <h3>parse()</h3>
 <p>Parses raw PouchDB document data by converting any ISO dates into Date objects. This method available on all Document and Lazybones instances.</p><h4>Arguments</h4>
@@ -139,29 +158,6 @@ exports.parse = <span class="hljs-function"><span class="hljs-keyword">function<
         </li>
         
         
-        <li id="section-5">
-            <div class="annotation">
-              
-              <div class="pilwrap for-h3">
-                <a class="pilcrow" href="#section-5">&#182;</a>
-              </div>
-              <h3>asyncDefer()</h3>
-<p>Creates a deferred promise that is not resolved until the next system tick.</p><h4>Arguments</h4>
-<ul>
-<li><strong>data</strong> <em>mixed</em> - Data to pass along through the promise.</li>
-</ul>
-
-            </div>
-            
-            <div class="content"><div class='highlight'><pre>exports.asyncDefer = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(data)</span> </span>{
-    <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> Promise(<span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(resolve)</span> </span>{
-        process.nextTick(resolve.bind(<span class="hljs-literal">null</span>, data));
-    });
-}</pre></div></div>
-            
-        </li>
-        
-        
         <li id="section-6">
             <div class="annotation">
               
@@ -182,26 +178,46 @@ exports.parse = <span class="hljs-function"><span class="hljs-keyword">function<
 
             </div>
             
-            <div class="content"><div class='highlight'><pre><span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">LazyError</span><span class="hljs-params">(code, msg)</span> </span>{
-    <span class="hljs-built_in">Error</span>.call(<span class="hljs-keyword">this</span>);
+            <div class="content"><div class='highlight'><pre><span class="hljs-keyword">var</span> LazyError =
+exports.LazyError = extend.call(<span class="hljs-built_in">Error</span>, {
+    constructor: <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(msg)</span> </span>{
+        <span class="hljs-built_in">Error</span>.call(<span class="hljs-keyword">this</span>);
+        
+        <span class="hljs-keyword">var</span> msgvars = <span class="hljs-built_in">Array</span>.prototype.slice.call(<span class="hljs-built_in">arguments</span>, <span class="hljs-number">1</span>);
+        <span class="hljs-keyword">var</span> errors = <span class="hljs-keyword">this</span>.constructor.errors;
+        <span class="hljs-keyword">var</span> code = <span class="hljs-keyword">typeof</span> msg === <span class="hljs-string">"string"</span> ? msg.toUpperCase() : <span class="hljs-literal">null</span>;
+        
+        <span class="hljs-keyword">if</span> (code &amp;&amp; errors[code]) msg = <span class="hljs-literal">null</span>;
+        <span class="hljs-keyword">else</span> code = <span class="hljs-string">"UNKNOWN_ERROR"</span>;
 
-    <span class="hljs-keyword">var</span> code = _.isString(code) ? code.toUpperCase() : <span class="hljs-literal">null</span>;
-    <span class="hljs-keyword">if</span> (!code || LazyError.errors[code] == <span class="hljs-literal">null</span>) code = <span class="hljs-string">"UNKNOWN_ERROR"</span>;
+        <span class="hljs-keyword">this</span>.code = code;
 
-    <span class="hljs-keyword">this</span>.code = code;
+        <span class="hljs-built_in">Object</span>.defineProperty(<span class="hljs-keyword">this</span>, <span class="hljs-string">"_message"</span>, {
+            value: sprintf(msg || errors[code], msgvars),
+            writeable: <span class="hljs-literal">false</span>,
+            enumerable: <span class="hljs-literal">false</span>,
+            configurable: <span class="hljs-literal">false</span>
+        });
+    },
 
-    <span class="hljs-built_in">Object</span>.defineProperty(<span class="hljs-keyword">this</span>, <span class="hljs-string">"_message"</span>, {
-        value: msg || LazyError.errors[code],
-        writeable: <span class="hljs-literal">false</span>,
-        enumerable: <span class="hljs-literal">false</span>,
-        configurable: <span class="hljs-literal">false</span>
-    });
-}
+    name: <span class="hljs-string">"LazyError"</span>,
 
-exports.LazyError = LazyError;
-LazyError.prototype = <span class="hljs-built_in">Object</span>.create(<span class="hljs-built_in">Error</span>.prototype);
+    toString: <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> </span>{
+        <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>.name + <span class="hljs-string">": "</span> + <span class="hljs-keyword">this</span>.message;
+    }
+}, {
+    extend: extend,
 
-LazyError.prototype.name = <span class="hljs-string">"LazyError"</span>;
+    errors: {
+        POUCH_ERROR: <span class="hljs-string">"%s"</span>,
+        INVALID_POUCH: <span class="hljs-string">"Expecting an instance of PouchDB."</span>,
+        INVALID_DOC: <span class="hljs-string">"Sync can only %s documents."</span>,
+        INVALID_METHOD: <span class="hljs-string">"Sync does not support method '%s'"</span>,
+        MISSING_DB: <span class="hljs-string">"Could not locate a PouchDB instance to sync with."</span>,
+        DESTROY_DB: <span class="hljs-string">"Database is already in the process of being destroyed."</span>,
+        UNKNOWN_ERROR: <span class="hljs-string">"An unknown error occurred."</span>
+    }
+});
 
 <span class="hljs-built_in">Object</span>.defineProperty(LazyError.prototype, <span class="hljs-string">"message"</span>, {
     get: <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> </span>{
@@ -209,11 +225,7 @@ LazyError.prototype.name = <span class="hljs-string">"LazyError"</span>;
     },
     enumerable: <span class="hljs-literal">true</span>,
     configurable: <span class="hljs-literal">false</span>
-});
-
-LazyError.prototype.toString = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> </span>{
-    <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>.name + <span class="hljs-string">": "</span> + <span class="hljs-keyword">this</span>.message;
-}</pre></div></div>
+});</pre></div></div>
             
         </li>
         
@@ -221,33 +233,8 @@ LazyError.prototype.toString = <span class="hljs-function"><span class="hljs-key
         <li id="section-7">
             <div class="annotation">
               
-              <div class="pilwrap for-h4">
-                <a class="pilcrow" href="#section-7">&#182;</a>
-              </div>
-              <h4>Error Codes</h4>
-<p>These are the error codes used by LazyError and their default messages. Custom error codes can be created by adding to this list.</p>
-            </div>
-            
-            <div class="content"><div class='highlight'><pre>LazyError.errors = {
-    POUCH_ERROR: <span class="hljs-string">"PouchDB had an error."</span>,
-    INVALID_DOC: <span class="hljs-string">"Expecting a valid document."</span>,
-    MISSING_ID: <span class="hljs-string">"Document is missing '_id' attribute."</span>,
-    MISSING_REV: <span class="hljs-string">"Document is missing '_rev' attribute."</span>,
-    MISSING_DB: <span class="hljs-string">"Document is missing database reference."</span>,
-    ILLEGAL_UPDATE: <span class="hljs-string">"Refusing to update this document."</span>,
-    WRITE_CANCELLED: <span class="hljs-string">"Database write was canceled."</span>,
-    DESTROY_DB: <span class="hljs-string">"Database is already in the process of being destroyed."</span>,
-    UNKNOWN_ERROR: <span class="hljs-string">"An unknown error occurred."</span>
-}</pre></div></div>
-            
-        </li>
-        
-        
-        <li id="section-8">
-            <div class="annotation">
-              
               <div class="pilwrap for-h3">
-                <a class="pilcrow" href="#section-8">&#182;</a>
+                <a class="pilcrow" href="#section-7">&#182;</a>
               </div>
               <h3>transformPouchError()</h3>
 <p>Transforms a PouchError into a LazyError and then throws it. If the passed error is not a PouchError, the original error is thrown without modification.</p><h4>Arguments</h4>

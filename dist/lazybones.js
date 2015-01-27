@@ -2,7 +2,7 @@
  * Lazybones
  * (c) 2014 Beneath the Ink, Inc.
  * MIT License
- * Version 0.1.8
+ * Version 0.2.0
  */
 
 !function(e){if("object"==typeof exports&&"undefined"!=typeof module)module.exports=e();else if("function"==typeof define&&define.amd)define([],e);else{var f;"undefined"!=typeof window?f=window:"undefined"!=typeof global?f=global:"undefined"!=typeof self&&(f=self),f.Lazybones=e()}}(function(){var define,module,exports;return (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
@@ -19,7 +19,7 @@ var _ = require("underscore"),
 /**
  * ## Constructor
  *
- * To create a new document model, use `db.add()` on the Lazybones instance. This ensures the document is properly initialized, with correct reference back to the database object.
+ * To create a new document model, use `db.add()` on the Lazybones instance. This ensures the document is properly initialized, with correct reference back to the PouchDB object.
  *
  * ```javascript
  * var model = db.add({ foo: "bar" });
@@ -31,49 +31,37 @@ var _ = require("underscore"),
  * 
  * - **attr** _object_ - An object of initial properties for the document.
  * - **options** _object; optional_ - An object of options to initiate the document with. This variable is passed directly to the `Backbone.Model` constructor.
- *   - **options.collection** _Lazybones_ - An instance of Lazybones to use as the attached database. This value is used by `Lazybones.sync` to make database writes.
- */
-function Document(attrs, options) {
-	if (attrs == null) attrs = {};
-
-	// make sure there is always an id
-	if (attrs._id == null) attrs._id = utils.uuid();
-
-	// call parent constructor
-	Backbone.Model.call(this, attrs, options);
-}
-
-// export first so any recursive dependents get correct value
-module.exports = Document;
-
-// Document extends Backbone.Model
-Document.prototype = Object.create(Backbone.Model.prototype);
-
-/**
- * ## Static Methods & Properties
- * 
- * - **Document.extend** _function_ - Creates a subclass of Document. This is the same method that Backbone uses.
+ *   - **options.pouch** _PouchDB - An instance of PouchDB to use as the attached database. This value is used by `Lazybones.sync` to make database writes.
  */
 
-Document.extend = Backbone.Model.extend;
+var Document =
+module.exports = Backbone.Model.extend({
 
-/**
- * ## Instance Properties
- *
- * These properties are in addition to the properties set by `Backbone.Model`.
- * 
- * - **db.collection** _Lazybones_ - The Lazybones instance this document is a part of. This property is used by `Lazybones.sync` to make writes to the correct database.
- * - **db.omitKeys** _array[string]_ - An array of attribute keys that `doc.toJSON()` will ignore. This is useful if there are attributes that should remain in-memory only and not be saved to the database.
- *
- * ## Instance Methods
- *
- * These methods are in addition to methods provided by `Backbone.Model`.
- */
-_.extend(Document.prototype, {
+	constructor: function(attrs, options) {
+		if (attrs == null) attrs = {};
+
+		// make sure there is always an id
+		if (attrs._id == null) attrs._id = utils.uuid();
+
+		// attach any passed pouch references
+		if (options && options.pouch) this.pouch = options.pouch;
+
+		// call parent constructor
+		Backbone.Model.call(this, attrs, options);
+	},
+
+	/**
+	 * ## Instance Properties & Methods
+	 *
+	 * These properties are in addition to the properties set by `Backbone.Model`.
+	 * 
+	 * - **db.omitKeys** _array[string]_ - An array of attribute keys that `doc.toJSON()` will ignore. This is useful if there are attributes that should remain in-memory only and not be saved to the database.
+	 */
 	
 	idAttribute: "_id",
 	parse: utils.parse,
 	sync: require("./sync"),
+	omitKeys: null,
 
 	/**
 	 * ### toJSON()
@@ -104,39 +92,38 @@ _.extend(Document.prototype, {
 	 */
 	isNew: function() {
 		return !this.has("_rev");
-	},
-
-	/**
-	 * ### destroy()
-	 *
-	 * Usage is identical to `Model#destroy()` in Backbone. It is declared here because we must pass the Lazybones reference in via options since the document is removed from the collection before `sync()` is called.
-	 */
-	destroy: function(options) {
-		options = options || {};
-		options.database = this.collection;
-		return Backbone.Model.prototype.destroy.call(this, options);
 	}
 
 });
-},{"./sync":3,"./utils":4,"backbone":5,"underscore":115}],2:[function(require,module,exports){
+
+/**
+ * ## Backbone Symlink
+ *
+ * Document inherit methods from [Backbone Symlink](https://github.com/BeneathTheInk/backbone-symlink). This allows the document to have attribute id references to other documents.
+ */
+require("backbone-symlink").configure(Document);
+},{"./sync":3,"./utils":4,"backbone":6,"backbone-symlink":5,"underscore":117}],2:[function(require,module,exports){
 /**
  * # Lazybones
  *
  * Lazybones is a modified Backbone collection that integrates with PouchDB. By combining Backbone's object-oriented approach with PouchDB's super flexible databases, Lazybones provides a highly-functional API for storing and manipulating data in the browser and Node.js.
  *
- * A deeper understanding of [Backbone](http://backbonejs.org) is recommended since many of Lazybones methods and concepts are inherited directly from Backbone Collection. Knowledge of PouchDB's API is also recommended, but not required to use Lazybones.
+ * A deeper understanding of [Backbone](http://backbonejs.org) is recommended since many of Lazybones methods and concepts are inherited directly from Backbone. Knowledge of PouchDB's API is also recommended, but not required to use Lazybones.
  */
 
 var _ = require("underscore"),
 	Backbone = require("backbone"),
 	PouchDB = require("pouchdb"),
-	utils = require("./utils"),
 	Promise = require("bluebird");
+
+var utils = require("./utils"),
+	Document = require("./document"),
+	sync = require("./sync");
 
 /**
  * ## Constructor
  *
- * To use Lazybones, create a new database instance with a name:
+ * To use Lazybones, create a new database instance with a name or PouchDB instance:
  * 
  * ```javascript
  * var db = new Lazybones("testdb");
@@ -146,79 +133,42 @@ var _ = require("underscore"),
  * 
  * #### Arguments
  * 
- * - **name** _string_ - The name of the Pouch database to connect to. This can either be a local database name (indexeddb or leveldb) or a remote CouchDB url. This argument is required and a `MISSING_ID` error is thrown when not provided.
+ * - **name** _PouchDB | string_  - A PouchDB instance or a database name. This could also be `null` or an array like a traditional Backbone collection, however then the PouchDB instance must be passed via `options.pouch`.
  * - **options** _object; optional_ - An object of options to initiate the database with. This variable is passed directly to the `Backbone.Collection` constructor.
  *   - **options.pouch** _object | PouchDB_ - An instance of PouchDB or an object of options to pass to the PouchDB constructor.
  */
 
-function Lazybones(name, opts) {
-	opts = opts || {};
+module.exports = Backbone.Collection.extend({
 
-	// check the name variable
-	if (!_.isString(name) || name === "") {
-		throw new utils.LazyError("MISSING_ID", "Expecting non-empty string for database id.");
-	}
+	constructor: function(models, options) {
+		options = options || {};
+		var pouch;
 
-	// create PouchDB instance from options
-	this.pouch = opts.pouch instanceof PouchDB ? opts.pouch : new PouchDB(name, opts.pouch);
+		if (typeof models === "string") {
+			pouch = new PouchDB(models, options.pouch);
+			models = null;
+		} if (models instanceof PouchDB) {
+			pouch = models;
+			models = null;
+		} else if (options.pouch) {
+			pouch = options.pouch;
+		}
 
-	// clean up on destruction
-	this.pouch.on("destroyed", this.trigger.bind(this, "destroyed"));
+		if (!(pouch instanceof PouchDB)) {
+			throw new utils.LazyError("INVALID_POUCH");
+		}
 
-	// capture error events so they don't ruin the party
-	this.pouch.on("error", this.trigger.bind(this, "error"));
+		this.pouch = pouch;
+		pouch.once("destroyed", this.trigger.bind(this, "destroyed"));
 
-	// set the database name on the object for easy access
-	Object.defineProperty(this, "name", {
-		value: name,
-		writeable: false,
-		configurable: true,
-		enumerable: true
-	});
+		return Backbone.Collection.call(this, models, options);
+	},
 
-	// finish initialization as an empty collection.
-	Backbone.Collection.call(this, [], opts);
-}
-
-// export immediately so recursive dependents get the correct value
-module.exports = Lazybones;
-
-// Lazybones is an extension Backbone.Collection 
-Lazybones.prototype = Object.create(Backbone.Collection.prototype);
-
-// the current version
-Lazybones.VERSION = "0.1.8";
- 
-/**
- * ## Static Methods & Properties
- * 
- * - **Lazybones.utils** _object_ - Lazybones and PouchDB utility methods.
- * - **Lazybones.Document** _function_ - The Document constructor, which is a subclass of `Backbone.Model`.
- * - **Lazybones.sync** _function_ - The Lazybones sync method. This replaces `Backbone.sync`.
- * - **Lazybones.extend** _function_ - Creates a subclass of Lazybones. This is the same method that Backbone uses.
- */
-
-// load in other parts before setting up class methods
-Lazybones.utils = utils;
-var Document = Lazybones.Document = require("./document");
-Lazybones.Backbone = Backbone;
-Lazybones.PouchDB = PouchDB;
-Lazybones.sync = require("./sync");
-Lazybones.extend = Backbone.Collection.extend;
-
-/**
- * ## Instance Properties
- * 
- * - **db.name** _string; non-writeable_ - The database name passed in to the constructor is set as a non-writeable property on the instance to make easy to access.
- * - **db.model** _function_ - The model constructor to use when creating documents from data. This defaults to `Lazybones.Document`, but can be any subclass of `Backbone.Model` or a function which returns new model instances.
- *
- * ## Instance Methods
- *
- * These methods are addition to methods provided by `Backbone.Collection`.
- */
-_.extend(Lazybones.prototype, {
-
-	// add externally declared methods
+	/**
+	 * ## Instance Properties & Methods
+	 *
+	 * These properties are addition to methods provided by `Backbone.Collection`.
+	 */
 	model: Document,
 	parse: utils.parse,
 	sync: require("./sync"),
@@ -233,9 +183,6 @@ _.extend(Lazybones.prototype, {
 	 * #### Arguments
 	 * 
 	 * - **options** _object; optional_ - An object of properties that are passed to `pouch.changes()`. All PouchDB changes properties are allowed, except for `include_docs` which is set to true. Below are the properties with default values. Please see the [PocuhDB documentation](http://pouchdb.com/api.html#changes) for the remaining options.
-	 *   - **options.attachments** _boolean_ - Whether or not to include attachment data in the request. If `true`, attachments will be accessible via the `_attachments` attribute. Default value is `false`.
-	 *   - **options.conflicts** _boolean_ - Whether or not to include conflicting revision ids in the `_conflicts` attribute. Default value is `true`.
-	 *   - **options.returnDocs** _boolean_ - Tells PouchDB to not return all the documents on the `complete` event, preventing a lot of extra memory usage. Default value is `false`.
 	 *   - **options.live** _boolean_ - The database will continuously listen for changes, keeping the in-memory documents in sync with those in the database. Setting this to `false` will result in the database disconnecting as soon as it is has been caught up. Default value is `true`.
 	 */
 	connect: function(options) {
@@ -246,7 +193,7 @@ _.extend(Lazybones.prototype, {
 
 		// create/update function
 		function onChange(row) {
-			self.add(row.doc, { merge: true, database: self });
+			self.add(row.doc, { merge: true, pouch: self.pouch });
 		}
 
 		// uptodate event should only be called once per connection
@@ -257,9 +204,6 @@ _.extend(Lazybones.prototype, {
 		// the listener
 		var listener =
 		this._pouchChange = this.pouch.changes(_.extend({
-			attachments: false,
-			conflicts: true,
-			returnDocs: false,
 			live: true
 		}, options, {
 			include_docs: true
@@ -283,7 +227,7 @@ _.extend(Lazybones.prototype, {
 			self.trigger("error", e);
 		}))
 
-		.then(function(resp) {
+		.finally(function(resp) {
 			// clean up
 			self.disconnect();
 
@@ -324,233 +268,50 @@ _.extend(Lazybones.prototype, {
 	},
 
 	/**
-	 * ### load()
-	 *
-	 * A combination of `db.fetch()` and `db.connect()`. This will fetch all the current documents from PouchDB, then it begins listening to the changes feed starting from the current update sequence. In this way, the Lazybones instance can catch up very quickly and efficiently, and also continue to receive future database.
-	 *
-	 * This method returns a promise that is resolved when the database has been fetched and the live replication has started.
-	 */
-	load: function(options) {
-		options = options || {};
-
-		// get the database info to get the last sequence number
-		return Promise.cast(this.pouch.info()).bind(this)
-
-		// fetch the database for a super-fast catch up
-		.tap(function() { return this.fetch(options); })
-
-		// connect, starting at the last sequence
-		.then(function(info) {
-			return this.connect(_.extend({}, options, { since: info.update_seq }));
-		});
-	},
-
-	/**
 	 * ### destroy()
 	 *
-	 * Destroys the underlying PouchDB database. This will keep all the existing documents in-memory, so call `db.reset()` to remove those as well. The Lazybones instance cannot be used after this method has been called.
+	 * Destroys the underlying PouchDB database. This will keep all the existing documents in-memory, so call `db.reset()` to remove those as well. The Lazybones instance should not used after this method has been called.
 	 *
 	 * This method returns a promise that is resolved when the database is destroyed.
 	 */
 	destroy: function() {
-		if (this._destroying) {
-			return Promise.reject(new utils.LazyError("DESTROY_DB")).bind(this);
-		}
-
-		// set database destroyed state
-		this._destroying = true;
-
 		// disconnect live connection
 		this.disconnect();
 
-		// clean up the write queue
-		return this._cancelWrites()
-
-		// destroy the pouch database
-		.then(function() {
-			return this.pouch.destroy();
-		})
-
-		.finally(function() {
-			this._destroying = false;
-		});
+		// destroy the underlying pouch database
+		return Promise.cast(this.pouch.destroy()).bind(this);
 	},
 
 	/**
-	 * ### _pushWrite()
+	 * ### _prepareModel()
 	 *
-	 * A private method that adds a document insert, update, or delete request to the internal write queue. If the document is already in the queue, nothing happens.
-	 *
-	 * This method returns a promise that is resolved when the write is completed.
-	 *
-	 * #### Arguments
-	 * 
-	 * - **doc** _object_ - A plain javascript object to write to the database. This should have at least `_id` property.
-	 * - **_delete** _boolean_ - A flag to mark this write as a delete instead of an insert or update. Defaults to `false`.
+	 * Any models created from the collection should have references back to the underlying PouchDB instance. This helps during syncing, but is also useful inside the model classes. This custom `_prepareModel()` method overrides Backbone's to ensure the PouchDB is always passed along to documents.
 	 */
-	_pushWrite: function(doc, _delete) {
-		if (this._writeQueue == null) this._writeQueue = {};
-		var self = this;
-
-		return new Promise(function(resolve, reject) {
-			// if the database is being destroyed we can reject with a cancel
-			if (self._destroying) throw new utils.LazyError("WRITE_CANCELLED");
-
-			// verify document
-			if (!_.has(doc, "_id")) throw new utils.LazyError("MISSING_ID");
-
-			// if deleting, transform the document
-			if (_delete) {
-				doc = _.pick(doc, "_id", "_rev");
-				if (!doc._rev) throw new utils.LazyError("MISSING_REV");
-				doc._deleted = true;
-			}
-
-			// we only overwrite if the existing doc isn't marked as deleted
-			if (!doc._deleted) {
-				var existing = self._writeQueue[doc._id];
-				if (existing && existing._deleted) {
-					throw new utils.LazyError("ILLEGAL_UPDATE", "Refusing to update a queued deleted document.");
-				}
-			}
-			
-			// add to the queue
-			self._writeQueue[doc._id] = {
-				doc: doc,
-				resolve: resolve,
-				reject: reject
-			};
-
-			// invalidate the queue
-			self._invalidateWrites();
-		})
-
-		.bind(this)
-		.catch(utils.transformPouchError);
-	},
-
-	/**
-	 * ### _flushWrites()
-	 *
-	 * A private method that pushes the first 100 requests in the write queue to the database. When finished, this calls `db._invalidateWrites()` to continue flushing any remaining requests.
-	 *
-	 * This method returns a promise that is resolved when the requests pulled from the queue on this flush have all completed.
-	 */
-	_flushWrites: function() {
-		if (this._writeQueue == null) this._writeQueue = {};
-
-		// wrapper promise for error catching
-		return Promise.bind(this).then(function() {
-			var queue;
-
-			// don't flush while flushing
-			if (this._flushing) {
-				this._invalidateWrites();
-				return Promise.bind(this);
-			}
-
-			// make sure there are items in the queue
-			queue = this._writeQueue;
-			if (!_.size(queue)) return;
-
-			// promise that writes to database
-			return Promise.bind(this).then(function() {
-				var ids, docs;
-
-				// enable flush state
-				this._flushing = true;
-
-				// extract first 100 ids
-				ids = Object.keys(queue).slice(0, 100);
-				docs = _.values(_.pick(queue, ids));
-
-				// push all the docs at once
-				return Promise.cast(this.pouch.bulkDocs(_.pluck(docs, "doc"))).bind(this)
-
-				// catch any immediate pouch errors
-				.catch(utils.transformPouchError)
-
-				// return result async
-				.map(function(result, index) {
-					// resolve or reject depending on result
-					docs[index][result.error ? "reject" : "resolve"](result);
-
-					// remove from the queue if resolution was successful
-					delete queue[ids[index]];
-					
-					// force it async so we can't lock up the browser
-					return utils.asyncDefer();
-				}, { concurrency: 20 })
-
-				// after a successful write, invalidate the queue again
-				.then(this._invalidateWrites);
-			})
-
-			// always, always reset state
-			.finally(function() {
-				delete this._flushing;
-				this.trigger("flush");
-			});
-
-		})
-
-		// catch any major errors
-		.catch(function(e) {
-			console.log(e);
-			this.trigger("error", e);
-			throw e;
-		});
-	},
-
-	/**
-	 * ### _invalidateWrites()
-	 *
-	 * A private method that sets up a timeout that calls `db._flushWrites()` after 200ms. If a timeout is already running, this method has no effect.
-	 *
-	 * `this` is returned for method chaining.
-	 */
-	_invalidateWrites: function() {
-		var self = this;
-
-		// only set timeout if doesn't exist
-		if (this._writesTimeout == null) {
-			this._writesTimeout = setTimeout(function() {
-				delete self._writesTimeout;
-				self._flushWrites();
-			}, 200);
-		}
-		
-		return this;
-	},
-
-	/**
-	 * ### _cancelWrites()
-	 *
-	 * A private method that waits for any current writes to finish and then cancels all pending requests in the write queue with a `WRITE_CANCELLED` error. This ensures the write queue is empty before the database is destroyed.
-	 *
-	 * This method returns a promise that is resolved when all writes are flushed or canceled.
-	 */
-	_cancelWrites: function() {
-		var self = this;
-
-		// wait for the database to finish any current writes
-		return new Promise(function(resolve, reject) {
-			if (!self._flushing) resolve();
-			else self.once("flush", resolve);
-		}).bind(this)
-
-		// clean out all writes remaining in the queue
-		.then(function() {
-			_.each(this._writeQueue, function(d) {
-				d.reject(new utils.LazyError("WRITE_CANCELLED"));
-			});
-
-			this._writeQueue = {};
-		});
+	_prepareModel: function(attrs, options) {
+		options = options || {};
+		if (options.pouch == null) options.pouch = this.pouch;
+		return Backbone.Collection.prototype._prepareModel.call(this, attrs, options);
 	}
 
+}, {
+
+	/**
+	 * ## Static Methods & Properties
+	 * 
+	 * - **Lazybones.utils** _object_ - Lazybones and PouchDB utility methods.
+	 * - **Lazybones.Document** _function_ - The Document constructor, which is a subclass of `Backbone.Model`.
+	 * - **Lazybones.sync** _function_ - The Lazybones sync method. This replaces `Backbone.sync`.
+	 * - **Lazybones.extend** _function_ - Creates a subclass of Lazybones. This is the same method that Backbone uses.
+	 */
+	VERSION: '0.2.0',
+	utils: utils,
+	sync: sync,
+	Document: Document,
+	Backbone: Backbone,
+	PouchDB: PouchDB
+
 });
-},{"./document":1,"./sync":3,"./utils":4,"backbone":5,"bluebird":8,"pouchdb":76,"underscore":115}],3:[function(require,module,exports){
+},{"./document":1,"./sync":3,"./utils":4,"backbone":6,"bluebird":9,"pouchdb":77,"underscore":117}],3:[function(require,module,exports){
 /**
  * # Sync
  *
@@ -563,21 +324,23 @@ _.extend(Lazybones.prototype, {
  * #### Arguments
  *
  * - **method** _string_ - The CRUD action to perform on the document or database. Must be `create`, `read`, `update` or `delete`.
- * - **model** _Document | Lazybones_ - The document or database to perform the database action on.
+ * - **model** _Model | Collction_ - The Backbone model or collection instance to perform the database action on.
  * - **options** _object; optional_ - An object of options to use while syncing. These options are available on any `.fetch()`, `.save()`, or `.destroy()` calls. The options are also passed directly to the PouchDB instance, so depending on the method, additional options are available.
- *   - **options.database** _Lazybones_ - An instance of Lazybones to use for the request. If this is not provided, `doc.collection` is used instead. Sync will produce an error if no database is provided.
+ *   - **options.pouch** _PouchDB_ - An instance of PouchDB to use for the request. If this is not provided, the database is inferred from the model provided. Sync will produce an error if no database can be located.
  *   - **options.success** _function_ - A function that called when the sync completes successfully.
  *   - **options.error** _function_ - A function that called when the sync cannot complete.
  */
 
 var _ = require("underscore"),
 	debug = require("debug")("lazybones:sync"),
-	utils = require("./utils"),
-	Document = require("./document"),
-	Database = require("./lazybones"),
-	Promise = require("bluebird");
+	PouchDB = require("pouchdb"),
+	Promise = require("bluebird"),
+	utils = require("./utils");
 
 function noop(){}
+
+var FETCH_DOC_OPTS = [ "ajax", "conflicts", "attachments", "rev", "revs" ],
+	FETCH_BULK_OPTS = [ "startkey", "endkey", "inclusive_end", "limit", "skip", "descending", "key", "keys", "stale", "conflicts", "attachments" ];
 
 module.exports = function sync(method, model, options) {
 	if (options == null) options = {};
@@ -585,66 +348,66 @@ module.exports = function sync(method, model, options) {
 	if (!_.isFunction(options.error)) options.error = noop;
 
 	var promise = Promise.bind(this).then(function() {
-		var isdoc, isdb, db, data, id, pouch_opts;
+		var ismodel, iscol, db, data, id, pouch_opts;
 
-		isdoc = model instanceof Document;
-		isdb = model instanceof Database;
+		method = method.toLowerCase();
+		ismodel = utils.isBackboneModel(model);
+		iscol = utils.isBackboneCollection(model);
 
-		if (!(isdoc || isdb)) {
-			throw new utils.LazyError("UNKNOWN_ERROR", "Sync is expecting a valid document or database.");
+		if (!(ismodel || iscol)) {
+			throw new utils.LazyError("UNKNOWN_ERROR", "Sync is expecting a Backbone model or collection.");
 		}
 
 		db = options.database != null ? options.database :
-			isdb ? model : model.collection;
+			model.pouch != null ? model.pouch : 
+			model.collection ? model.collection.pouch : null;
 
-		if (!(db instanceof Database)) {
+		if (!(db instanceof PouchDB)) {
 			throw new utils.LazyError("MISSING_DB");
 		}
 
-		data = model.toJSON();
-		id = data._id;
-
-		if (isdoc) debug("%s %s (%s)", method, id, db.name);
-		else debug("%s %s", method, db.name);
+		if (ismodel) {
+			data = model.toJSON();
+			id = data._id;
+			debug("%s %s (%s)", method, id, db._db_name);
+		} else {
+			debug("%s %s", method, db._db_name);
+		}
 
 		switch (method) {
 			case "read":
 				// fetch single if document
-				if (isdoc) {
-					pouch_opts = _.extend({
-						conflicts: true,
-						attachments: false
-					}, options);
-
-					return Promise.cast(db.pouch.get(id, pouch_opts)).tap(options.success);
+				if (ismodel) {
+					return Promise.cast(db.get(id, _.pick(options, FETCH_DOC_OPTS))).tap(options.success);
 				}
 
-				// or all if it's a database
-				else {
-					pouch_opts = _.extend({
-						conflicts: true,
-						attachments: false
-					}, options, {
-						include_docs: true // always must include the full document
-					});
+				pouch_opts = _.extend(_.pick(options, FETCH_BULK_OPTS), {
+					include_docs: true // always must include the full document
+				});
 
-					return Promise.cast(db.pouch.allDocs(pouch_opts)).tap(function(res) {
-						options.success(_.pluck(res.rows, "doc"));
-					});
-				}
+				return Promise.cast(
+					options.query != null ?
+					db.query(options.query, pouch_opts) :
+					db.allDocs(pouch_opts)
+				).tap(function(res) {
+					options.success(_.pluck(res.rows, "doc"));
+				});
 
 			case "create":
 			case "update":
 			case "delete":
 				// create, update and delete only work on documents
-				if (!isdoc) {
-					throw new utils.LazyError("INVALID_DOCUMENT", "Sync can only " + method + " documents.");
+				if (!ismodel) {
+					throw new utils.LazyError("INVALID_DOC", method);
 				}
 
-				return db._pushWrite(data, method === "delete").tap(function(res) {
+				return Promise.cast(db[method === "delete" ? "remove" : "put"](data)).tap(function(res) {
 					// update revision
 					options.success({ _rev: res.rev });
 				});
+
+			default:
+				throw new utils.LazyError("INVALID_METHOD", method);
 
 		}
 	});
@@ -662,8 +425,7 @@ module.exports = function sync(method, model, options) {
 	// return the promise and model
 	return promise;
 }
-},{"./document":1,"./lazybones":2,"./utils":4,"bluebird":8,"debug":41,"underscore":115}],4:[function(require,module,exports){
-(function (process){
+},{"./utils":4,"bluebird":9,"debug":42,"pouchdb":77,"underscore":117}],4:[function(require,module,exports){
 /**
  * # Utils
  *
@@ -672,7 +434,10 @@ module.exports = function sync(method, model, options) {
 
 var _ = require("underscore"),
 	PouchDB = require("pouchdb"),
-	Promise = require("bluebird");
+	Promise = require("bluebird"),
+	Symlink = require("backbone-symlink"),
+	sprintf = require("sprintf-js").vsprintf,
+	extend = require("backbone").Model.extend;
 
 /**
  * ### uuid()
@@ -687,6 +452,11 @@ exports.uuid = PouchDB.utils.uuid;
  * A direct reference to the Bluebird Promise object.
  */
 exports.Promise = Promise;
+
+/* Expose Backbone Symlink and attach two specific utility methods: `isBackboneModel()` and `isBackboneCollection()`. These methods are used instead of `instanceof` because they test the features of an object, not the inheritance. */
+exports.Symlink = Symlink;
+exports.isBackboneModel = Symlink.isBackboneModel;
+exports.isBackboneCollection = Symlink.isBackboneCollection;
 
 /**
  * ### parse()
@@ -720,21 +490,6 @@ exports.parse = function(attrs) {
 }
 
 /**
- * ### asyncDefer()
- *
- * Creates a deferred promise that is not resolved until the next system tick.
- *
- * #### Arguments
- *
- * - **data** _mixed_ - Data to pass along through the promise.
- */
-exports.asyncDefer = function(data) {
-	return new Promise(function(resolve) {
-		process.nextTick(resolve.bind(null, data));
-	});
-}
-
-/**
  * ### LazyError()
  *
  * A custom error class that all errors thrown by Lazybones are wrapped in.
@@ -749,26 +504,46 @@ exports.asyncDefer = function(data) {
  * - **code** _string_ - The error code.
  * - **message** _string_ - The error message and code.
  */
-function LazyError(code, msg) {
-	Error.call(this);
+var LazyError =
+exports.LazyError = extend.call(Error, {
+	constructor: function(msg) {
+		Error.call(this);
+		
+		var msgvars = Array.prototype.slice.call(arguments, 1);
+		var errors = this.constructor.errors;
+		var code = typeof msg === "string" ? msg.toUpperCase() : null;
+		
+		if (code && errors[code]) msg = null;
+		else code = "UNKNOWN_ERROR";
 
-	var code = _.isString(code) ? code.toUpperCase() : null;
-	if (!code || LazyError.errors[code] == null) code = "UNKNOWN_ERROR";
+		this.code = code;
 
-	this.code = code;
+		Object.defineProperty(this, "_message", {
+			value: sprintf(msg || errors[code], msgvars),
+			writeable: false,
+			enumerable: false,
+			configurable: false
+		});
+	},
 
-	Object.defineProperty(this, "_message", {
-		value: msg || LazyError.errors[code],
-		writeable: false,
-		enumerable: false,
-		configurable: false
-	});
-}
+	name: "LazyError",
 
-exports.LazyError = LazyError;
-LazyError.prototype = Object.create(Error.prototype);
+	toString: function() {
+		return this.name + ": " + this.message;
+	}
+}, {
+	extend: extend,
 
-LazyError.prototype.name = "LazyError";
+	errors: {
+		POUCH_ERROR: "%s",
+		INVALID_POUCH: "Expecting an instance of PouchDB.",
+		INVALID_DOC: "Sync can only %s documents.",
+		INVALID_METHOD: "Sync does not support method '%s'",
+		MISSING_DB: "Could not locate a PouchDB instance to sync with.",
+		DESTROY_DB: "Database is already in the process of being destroyed.",
+		UNKNOWN_ERROR: "An unknown error occurred."
+	}
+});
 
 Object.defineProperty(LazyError.prototype, "message", {
 	get: function() {
@@ -777,27 +552,6 @@ Object.defineProperty(LazyError.prototype, "message", {
 	enumerable: true,
 	configurable: false
 });
-
-LazyError.prototype.toString = function() {
-	return this.name + ": " + this.message;
-}
-
-/**
- * #### Error Codes
- *
- * These are the error codes used by LazyError and their default messages. Custom error codes can be created by adding to this list.
- */
-LazyError.errors = {
-	POUCH_ERROR: "PouchDB had an error.",
-	INVALID_DOC: "Expecting a valid document.",
-	MISSING_ID: "Document is missing '_id' attribute.",
-	MISSING_REV: "Document is missing '_rev' attribute.",
-	MISSING_DB: "Document is missing database reference.",
-	ILLEGAL_UPDATE: "Refusing to update this document.",
-	WRITE_CANCELLED: "Database write was canceled.",
-	DESTROY_DB: "Database is already in the process of being destroyed.",
-	UNKNOWN_ERROR: "An unknown error occurred."
-}
 
 /**
  * ### transformPouchError()
@@ -819,8 +573,629 @@ exports.transformPouchError = function(e) {
 	nerr.pouch_name = e.name;
 	throw nerr;
 }
-}).call(this,require('_process'))
-},{"_process":50,"bluebird":8,"pouchdb":76,"underscore":115}],5:[function(require,module,exports){
+},{"backbone":6,"backbone-symlink":5,"bluebird":9,"pouchdb":77,"sprintf-js":116,"underscore":117}],5:[function(require,module,exports){
+(function(root, factory) {
+
+	// Set up Symlink appropriately for the environment
+	// Start with AMD
+	if (typeof define === 'function' && define.amd) {
+		define(['underscore', 'backbone'], function(_, Backbone) {
+			// Export global even in AMD case in case this script is loaded with
+			// others that may still expect a global Symlink.
+			root.Symlink = factory(root, _, Backbone);
+		});
+
+	// Next for Node.js or CommonJS
+	} else if (typeof module === 'object' && module.exports) {
+		module.exports = factory(root, require('underscore'), require("backbone"));
+
+	// as a browser global
+	} else if (root._ && root.Backbone) {
+		root.Symlink = factory(root, root._, root.Backbone);
+	
+	// finally just throw
+	} else {
+		throw new Error("Symlink could not locate Backbone and/or Underscore.");
+	}
+
+}(this, function(root, _, Backbone) {
+
+	function Symlink(model, attr, col, options) {
+		// verify arguments
+		if (!Symlink.isBackboneModel(model)) {
+			throw new Error("Expecting instance of Backbone model.");
+		}
+
+		if (!_.isString(attr) || attr == "") {
+			throw new Error("Expecting non-empty string for attribute.");
+		}
+
+		if (!Symlink.isBackboneCollection(col)) {
+			throw new Error("Expecting instance of Backbone collection.");
+		}
+
+		// set properties
+		this.active = false;
+		this.valid = false;
+		this.model = model;
+		this.attribute = attr;
+		this.collection = col;
+
+		// default options
+		this.options = _.defaults(options || {}, {
+			collection: Backbone.Collection
+		});
+
+		// init
+		this.attach();
+	}
+
+	// Symlink types
+	Symlink.NULL_LINK = 0;
+	Symlink.MODEL_LINK = 1;
+	Symlink.COLLECTION_LINK = 2;
+
+	Symlink.getType = function(val) {
+		return _.isArray(val) ? Symlink.COLLECTION_LINK :
+			_.isString(val) ? Symlink.MODEL_LINK :
+			Symlink.NULL_LINK;
+	}
+
+	// the issue with NPM dependencies is that sometimes we get a real Backbone
+	// model or collection that did not originate from the same Backbone library
+	// as this one. A simple instanceof check on this value will fail even
+	// though our code can handle it just fine. Instead, we'll use duck type
+	// checking to detect features so any Backbone-looking object will pass.
+	Symlink.isBackboneModel = function(val) {
+		return val instanceof Backbone.Model || (
+			val != null &&
+			typeof val.cid === "string" &&
+			typeof val.attributes === "object" &&
+			typeof val.get === "function" &&
+			typeof val.set === "function"
+		);
+	}
+
+	Symlink.isBackboneCollection = function(val) {
+		return val instanceof Backbone.Collection || (
+			val != null &&
+			_.isArray(val.models) &&
+			typeof val.model === "function" &&
+			typeof val.add === "function" &&
+			typeof val.remove === "function"
+		);
+	}
+
+	// Symlink methods
+	_.extend(Symlink.prototype, Backbone.Events, {
+
+		// sets up the symlink
+		attach: function() {
+			// detach first before reattaching
+			this.detach();
+
+			// full reset before beginning
+			this.reset(false);
+
+			// update active status
+			this.active = true;
+
+			// set initial values
+			this.update();
+
+			// listen to change on attribute
+			// "change:attr" events happen before "change" events
+			// which allows us to call set inside of it, but still
+			// make it seem like it was only set once.
+			this.listenTo(this.model, "change:" + this.attribute, this.update);
+
+			// detach if the model is destroyed
+			this.listenTo(this.model, "destroy", this.detach);
+
+			// announce the attachment
+			this.trigger("attach");
+
+			return this;
+		},
+
+		// takes down the symlink
+		detach : function() {
+			if (!this.active) return this;
+
+			// record the real value
+			var val = this.value;
+
+			// full reset without setting on the model
+			this.reset(false);
+			this.flushChanges();
+
+			// update active status
+			this.active = false;
+
+			// stop listening to the model
+			this.stopListening(this.model);
+
+			// set the model value directly to the real value
+			this.model.set(this.attribute, val);
+
+			// announce the detachment
+			this.trigger("detach");
+
+			return this;
+		},
+
+		// tells the symlink to update the value in the model
+		update: function() {
+			var symlink, col, attr, type, listener, Collection,
+				val, model, subset, updateValue, models;
+
+			// prevent overlapping events
+			if (!this.active || this._updating) return;
+			this._updating = true;
+
+			symlink = this;
+			col = this.collection;
+			attr = this.attribute;
+			Collection = this.options.collection;
+
+			// annouce the update
+			this.trigger("update");
+			
+			// remove any previous state
+			this.clean();
+
+			// get the new value
+			val = this.model.get(attr);
+
+			// get the new type
+			type = Symlink.isBackboneCollection(val) || _.isArray(val) ? Symlink.COLLECTION_LINK :
+				Symlink.isBackboneModel(val) || (_.isString(val) && val !== "") ? Symlink.MODEL_LINK :
+				Symlink.NULL_LINK;
+
+			// special things when the type changes			
+			if (type !== this.type) {
+				// full reset
+				this.reset(false);
+
+				// auto-listen for collection reset if not a null symlink
+				if (type !== Symlink.NULL_LINK) {
+					this.listenTo(col, "reset", this.update);
+				}
+			}
+
+			// set up symlink depending on type
+			switch (type) {
+
+				// array will return a sub collection
+				case Symlink.COLLECTION_LINK:
+
+					subset = this.subset;
+
+					if (Symlink.isBackboneCollection(val)) {
+						// if the value is the subset, we just want to refresh the subset content
+						val = val === subset ? this.value : val.toArray();
+					}
+
+					// parse the value into an array of ids
+					val = val.reduce(function(ids, m) {
+						if (Symlink.isBackboneModel(m)) m = m.id;
+						if (_.isString(m) && m !== "" && !_.contains(ids, m)) ids.push(m);
+						return ids;
+					}, []);
+
+					// set the real value to the set of ids
+					this.setValue(val);
+
+					// translate list of ids into a list of models
+					// not all models need to present immediately
+					models = val.map(function(id) {
+						return col.get(id);
+					}).filter(function(m) {
+						return m != null;
+					});
+
+					// make a new subset
+					if (subset == null) {
+						this.subset = subset = new Collection(models, {
+							comparator: function(m) {
+								var index, len;
+
+								if (_.isArray(symlink.value)) {
+									index = symlink.value.indexOf(m.id);
+									len = symlink.value.length;
+								} else {
+									index = -1;
+									len = this.length;
+								}
+								
+								// add at index or beginning if not valid otherwise the end
+								return index > 0 ? index : symlink.firstRun || !symlink.valid ? -1 : len;
+							}
+						});
+
+						// prepare models just like the parent does
+						if (col._prepareModel) subset._prepareModel = col._prepareModel.bind(col);
+
+						// listen to main collection for changes
+						this.listenTo(col, {
+							add: function(m, c, opts) {
+								if (_.contains(symlink.value, m.id)) subset.add(m);
+							},
+							remove: function(m, c, opts) {
+								subset.remove(m);
+							}
+						});
+
+						// generic function for updating the value from subset
+						updateValue = _.bind(function(opts, remove) {
+							if (opts.flush_link !== false) {
+								this.updateValueFromSubset(remove);
+								this.flushChanges();
+							}
+						}, this);
+
+						// listen to subset for changes
+						this.listenTo(subset, {
+							add:    function(m, c, opts) { updateValue(opts);       },
+							remove: function(m, c, opts) { updateValue(opts, m.id); },
+							reset:  function(c, opts)    { updateValue(opts);       }
+						});
+					}
+
+					// or just update the current subset
+					else {
+						subset.set(models, { merge: false, flush_link: false });
+					}
+
+					// set the validity
+					this.updateValidityFromSubset();
+
+					// set the subset as the virtual value
+					this.setVirtualValue(subset);
+
+					break;
+
+				// models and non-empty strings are used as look ups
+				case Symlink.MODEL_LINK:
+
+					// get the model from the collection
+					model = col.get(val);
+
+					// set the real value to the id
+					this.setValue(_.isString(val) ? val : val.id);
+					
+					// if the model exists now, we set it and wait for the removal
+					if (model != null) {
+						col.on("remove", listener = function(m) {
+							if (m === model) {
+								this.set(false, null);
+								this.flushChanges();
+							}
+						}, this);
+
+						this.set(true, model);
+					}
+
+					// if the model doesn't exist, we set null and wait for it to be added
+					else {
+						col.on("add", listener = function(m) {
+							if (m.id === val) {
+								this.set(true, m);
+								this.flushChanges();
+							}
+						}, this);
+
+						this.set(false, null);
+					}
+
+					// add listener to be cleaned up on next update
+					this._listeners.push([ col, null, listener ]);
+
+					break;
+
+				// otherwise we just set to null
+				case Symlink.NULL_LINK:
+
+					this.setValue(null);
+					this.set(true, null);
+
+					break;
+			}
+
+			// announce any changes
+			this.flushChanges();
+
+			// and finish
+			this.firstRun = false;
+			delete this._updating;
+
+			return this;
+		},
+
+		// sets the symlink's real value and type
+		setValue: function(val) {
+			this.value = val;
+			this.type = Symlink.getType(val);
+			return this;
+		},
+
+		// quick combo of setValid and setVirtualValue
+		set: function(valid, val, write) {
+			this.setValid(valid);
+			this.setVirtualValue(val, write);
+			return this;
+		},
+
+		// marks the symlink as valid or invalid
+		setValid: function(bool) {
+			this.valid = !!bool;
+			return this;
+		},
+
+		// sets the symlink's virtual value
+		setVirtualValue: function(val, write) {
+			// set new value
+			this.virtual = val;
+
+			// write to the model if specified
+			if (write == null || write) this.writeVirtualValue();
+			
+			return this;
+		},
+
+		// writes the virtual value to the model
+		writeVirtualValue: function() {
+			// only write the value if the symlink is active
+			if (!this.active) return this;
+			this.model.set(this.attribute, this.virtual || null);
+			return this;
+		},
+
+		// annouces changes to virtual value and validity
+		flushChanges: function() {
+			if (!this.active) return this;
+
+			// valid
+			if (this._oldValid !== this.valid) {
+				this.trigger("valid", this.valid);
+				this._oldValid = this.valid;
+			}
+
+			// virtual value
+			if (this._oldVirtual !== this.virtual) {
+				this.trigger("change", this.virtual, this._oldVirtual);
+				this._oldVirtual = this.virtual;
+			}
+
+			return this;
+		},
+
+		// check if a subset is valid
+		updateValidityFromSubset: function() {
+			if (this.subset == null) return this;
+
+			// value is only valid if all the items are present
+			this.setValid(_.every(this.value, function(id) {
+				return this.subset.get(id) != null;
+			}, this));
+
+			return this;
+		},
+
+		// sets the real value of the symlink according to models in the subset
+		updateValueFromSubset: function(remove) {
+			if (this.subset == null) return this;
+
+			// get the list of ids from the subset
+			var ids = this.subset.map(function(m) { return m.id; });
+
+			// if the symlink isn't valid yet, make sure to get all the ids
+			if (this.firstRun || !this.valid) {
+				// this union ensures that a race condition is not created
+				// if a model hasn't arrived yet, but changes are already
+				// being made on the subset; we want to ensure that models
+				// are not lost from our original list.
+				ids = _.union(this.value, ids);
+
+				// if a model was removed from the subset it was
+				// undoubtedly added back in the union, so this just
+				// guarantees it's removed.
+				if (remove != null) ids = _.without(ids, remove);
+			}
+
+			// update the real value to the list of ids
+			this.setValue(ids);
+
+			// value is only valid if all the items are present
+			this.updateValidityFromSubset();
+
+			return this;
+		},
+
+		// checks if this symlink contains a model or model id
+		contains: function(id) {
+			// we know the answer if the symlink has no value
+			if (this.value == null) return false;
+
+			// convert models to ids
+			if (isObject(id)) id = id.id;
+			
+			// result depends on value type
+			return isArray(this.value) ?
+				this.value.indexOf(id) > -1 :
+				this.value === id;
+		},
+
+		// cleans up any state created by update
+		clean: function() {
+			// kill any listeners we've set up
+			var listeners = (this._listeners || []).slice(0);
+			this._listeners = [];
+			listeners.forEach(function(l) {
+				l[0].off(l[1], l[2], l[3]);
+			});
+
+			return this;
+		},
+
+		// sets symlink back to a null state
+		reset: function(write) {
+			// clean up listeners
+			this.clean();
+
+			// stop listening to collection
+			this.stopListening(this.collection);
+
+			// kill the subset
+			if (this.subset != null) {
+				this.stopListening(this.subset);
+				delete this.subset;
+			}
+
+			// set null on all values
+			this.firstRun = true;
+			this.setValue(null);
+			this.set(true, null, write);
+
+			return this;
+		}
+
+	});
+
+	// Backbone Model methods
+	var model_methods = {
+
+		// creates a pointer from attr to a model in col
+		symlink: function(_super) {
+			return function symlink(attr, col, options) {
+				if (this._symlinks == null) this._symlinks = {};
+
+				// unlink before trying to symlink again
+				this.unlink(attr);
+
+				// create the symlink instance
+				var symlink = this._symlinks[attr] = new Symlink(this, attr, col, options);
+
+				// announce the symlink
+				this.trigger("symlink", symlink);
+
+				// return model for chaining
+				return this;
+			};
+		},
+
+		// returns the symlink by attribute
+		getSymlink: function(_super) {
+			return function getSymlink(attr) {
+				if (this._symlinks == null) this._symlinks = {};
+				return this._symlinks[attr];
+			};
+		},
+
+		// removes a symlink from an attribute
+		unlink: function(_super) {
+			return function unlink(attr) {
+				if (!_.isObject(this._symlinks)) return this;
+
+				// unlink everything if attr is empty
+				if (attr == null) {
+					for (var key in this._symlinks) {
+						this.unlink(key);
+					}
+					return this;
+				}
+
+				// get the symlink, if it exists
+				var symlink = this.getSymlink(attr);
+				if (symlink == null) return this;
+
+				// detach the symlink
+				symlink.detach();
+				
+				// delete the symlink
+				delete this._symlinks[attr];
+
+				// announce the unlink
+				this.trigger("unlink", symlink);
+
+				return this;
+			};
+		},
+
+		// gets the real value from an attribute
+		deref: function(_super) {
+			return function deref(attr) {
+				var symlink = this.getSymlink(attr);
+				if (symlink != null) return symlink.value;
+			};
+		},
+
+		// waits for a symlink to become valid before calling the callback
+		onArrival: function(_super) {
+			return function onArrival(attr, cb) {
+				var symlink = this.getSymlink(attr);
+				if (symlink == null) throw new Error("No symlink at attribute '" + attr + "'.");
+				if (!_.isFunction(cb)) throw new Error("Expecting function for callback.");
+
+				cb = cb.bind(this);
+				function ready() { cb(symlink.virtual, symlink); }
+
+				if (symlink.valid) ready();
+				else symlink.once("valid", ready);
+
+				return this;
+			};
+		},
+
+		// outputs the attributes with id reference instead of models
+		toJSON: function(_super) {
+			if (_super == null) _super = function() {
+				return _.clone(this.attributes);
+			}
+			
+			return function toJSON(options) {
+				var data = _super.apply(this, arguments);
+				
+				// convert symlinks to real values
+				if (this._symlinks != null) _.each(this._symlinks, function(link, attr) {
+					if (link.active && _.has(data, attr)) data[attr] = link.value;
+				});
+
+				return data;
+			}
+		}
+
+	};
+
+	// creates an object of methods as if extends the passed object
+	Symlink.methods = function(model) {
+		return _.reduce(model_methods, function(m, fn, name) {
+			m[name] = fn(model[name], Backbone);
+			return m;
+		}, {});
+	}
+
+	// attaches backbone methods to a backbone model instance
+	Symlink.configure = function(model) {
+		if (typeof model === "function") model = model.prototype;
+		if (typeof model !== "object" || !model) {
+			throw new Error("Expecting Model class or instance to attach methods to.");
+		}
+
+		return _.extend(model, Symlink.methods(model));
+	}
+
+	// restores previous Symlink global if need be
+	var previousSymlink = root.Symlink;
+	Symlink.noConflict = function() {
+		root.Symlink = previousSymlink;
+		return this;
+	}
+
+	// export the Symlink class
+	return Symlink;
+}));
+},{"backbone":6,"underscore":117}],6:[function(require,module,exports){
 //     Backbone.js 1.1.2
 
 //     (c) 2010-2014 Jeremy Ashkenas, DocumentCloud and Investigative Reporters & Editors
@@ -2430,7 +2805,7 @@ exports.transformPouchError = function(e) {
 
 }));
 
-},{"underscore":115}],6:[function(require,module,exports){
+},{"underscore":117}],7:[function(require,module,exports){
 "use strict";
 module.exports = function(Promise) {
 var SomePromiseArray = Promise._SomePromiseArray;
@@ -2456,7 +2831,7 @@ Promise.prototype.any = function () {
 
 };
 
-},{}],7:[function(require,module,exports){
+},{}],8:[function(require,module,exports){
 (function (process){
 "use strict";
 var firstLineError;
@@ -2566,7 +2941,7 @@ module.exports = new Async();
 module.exports.firstLineError = firstLineError;
 
 }).call(this,require('_process'))
-},{"./queue.js":30,"./schedule.js":33,"_process":50}],8:[function(require,module,exports){
+},{"./queue.js":31,"./schedule.js":34,"_process":51}],9:[function(require,module,exports){
 "use strict";
 var old;
 if (typeof Promise !== "undefined") old = Promise;
@@ -2579,7 +2954,7 @@ var bluebird = require("./promise.js")();
 bluebird.noConflict = noConflict;
 module.exports = bluebird;
 
-},{"./promise.js":25}],9:[function(require,module,exports){
+},{"./promise.js":26}],10:[function(require,module,exports){
 "use strict";
 var cr = Object.create;
 if (cr) {
@@ -2681,7 +3056,7 @@ Promise.prototype.get = function (propertyName) {
 };
 };
 
-},{"./util.js":40}],10:[function(require,module,exports){
+},{"./util.js":41}],11:[function(require,module,exports){
 "use strict";
 module.exports = function(Promise, INTERNAL) {
 var errors = require("./errors.js");
@@ -2732,7 +3107,7 @@ Promise.prototype.fork = function (didFulfill, didReject, didProgress) {
 };
 };
 
-},{"./async.js":7,"./errors.js":15}],11:[function(require,module,exports){
+},{"./async.js":8,"./errors.js":16}],12:[function(require,module,exports){
 (function (process){
 "use strict";
 module.exports = function() {
@@ -3195,7 +3570,7 @@ return CapturedTrace;
 };
 
 }).call(this,require('_process'))
-},{"./async.js":7,"./util.js":40,"_process":50}],12:[function(require,module,exports){
+},{"./async.js":8,"./util.js":41,"_process":51}],13:[function(require,module,exports){
 "use strict";
 module.exports = function(NEXT_FILTER) {
 var util = require("./util.js");
@@ -3267,7 +3642,7 @@ CatchFilter.prototype.doFilter = function (e) {
 return CatchFilter;
 };
 
-},{"./errors.js":15,"./es5.js":17,"./util.js":40}],13:[function(require,module,exports){
+},{"./errors.js":16,"./es5.js":18,"./util.js":41}],14:[function(require,module,exports){
 "use strict";
 var util = require("./util.js");
 var isPrimitive = util.isPrimitive;
@@ -3323,7 +3698,7 @@ Promise.prototype.thenThrow = function (reason) {
 };
 };
 
-},{"./util.js":40}],14:[function(require,module,exports){
+},{"./util.js":41}],15:[function(require,module,exports){
 "use strict";
 module.exports = function(Promise, INTERNAL) {
 var PromiseReduce = Promise.reduce;
@@ -3337,7 +3712,7 @@ Promise.each = function (promises, fn) {
 };
 };
 
-},{}],15:[function(require,module,exports){
+},{}],16:[function(require,module,exports){
 "use strict";
 var Objectfreeze = require("./es5.js").freeze;
 var util = require("./util.js");
@@ -3438,7 +3813,7 @@ module.exports = {
     AggregateError: errorTypes.AggregateError
 };
 
-},{"./es5.js":17,"./util.js":40}],16:[function(require,module,exports){
+},{"./es5.js":18,"./util.js":41}],17:[function(require,module,exports){
 "use strict";
 module.exports = function(Promise) {
 var TypeError = require("./errors.js").TypeError;
@@ -3456,7 +3831,7 @@ function apiRejection(msg) {
 return apiRejection;
 };
 
-},{"./errors.js":15}],17:[function(require,module,exports){
+},{"./errors.js":16}],18:[function(require,module,exports){
 var isES5 = (function(){
     "use strict";
     return this === undefined;
@@ -3530,7 +3905,7 @@ if (isES5) {
     };
 }
 
-},{}],18:[function(require,module,exports){
+},{}],19:[function(require,module,exports){
 "use strict";
 module.exports = function(Promise, INTERNAL) {
 var PromiseMap = Promise.map;
@@ -3544,7 +3919,7 @@ Promise.filter = function (promises, fn, options) {
 };
 };
 
-},{}],19:[function(require,module,exports){
+},{}],20:[function(require,module,exports){
 "use strict";
 module.exports = function(Promise, NEXT_FILTER, tryConvertToPromise) {
 var util = require("./util.js");
@@ -3645,7 +4020,7 @@ Promise.prototype.tap = function (handler) {
 };
 };
 
-},{"./util.js":40}],20:[function(require,module,exports){
+},{"./util.js":41}],21:[function(require,module,exports){
 "use strict";
 module.exports = function(Promise,
                           apiRejection,
@@ -3794,7 +4169,7 @@ Promise.spawn = function (generatorFunction) {
 };
 };
 
-},{"./errors.js":15,"./util.js":40}],21:[function(require,module,exports){
+},{"./errors.js":16,"./util.js":41}],22:[function(require,module,exports){
 "use strict";
 module.exports =
 function(Promise, PromiseArray, tryConvertToPromise, INTERNAL) {
@@ -3897,7 +4272,7 @@ Promise.join = function () {
 
 };
 
-},{"./util.js":40}],22:[function(require,module,exports){
+},{"./util.js":41}],23:[function(require,module,exports){
 "use strict";
 module.exports = function(Promise,
                           PromiseArray,
@@ -4029,7 +4404,7 @@ Promise.map = function (promises, fn, options, _filter) {
 
 };
 
-},{"./util.js":40}],23:[function(require,module,exports){
+},{"./util.js":41}],24:[function(require,module,exports){
 "use strict";
 module.exports = function(Promise) {
 var util = require("./util.js");
@@ -4088,7 +4463,7 @@ Promise.prototype.nodeify = function (nodeback, options) {
 };
 };
 
-},{"./async.js":7,"./util.js":40}],24:[function(require,module,exports){
+},{"./async.js":8,"./util.js":41}],25:[function(require,module,exports){
 "use strict";
 module.exports = function(Promise, PromiseArray) {
 var util = require("./util.js");
@@ -4166,7 +4541,7 @@ Promise.prototype._progressUnchecked = function (progressValue) {
 };
 };
 
-},{"./async.js":7,"./util.js":40}],25:[function(require,module,exports){
+},{"./async.js":8,"./util.js":41}],26:[function(require,module,exports){
 (function (process){
 "use strict";
 module.exports = function() {
@@ -5155,7 +5530,7 @@ return Promise;
 };
 
 }).call(this,require('_process'))
-},{"./any.js":6,"./async.js":7,"./call_get.js":9,"./cancel.js":10,"./captured_trace.js":11,"./catch_filter.js":12,"./direct_resolve.js":13,"./each.js":14,"./errors.js":15,"./errors_api_rejection":16,"./filter.js":18,"./finally.js":19,"./generators.js":20,"./join.js":21,"./map.js":22,"./nodeify.js":23,"./progress.js":24,"./promise_array.js":26,"./promise_resolver.js":27,"./promisify.js":28,"./props.js":29,"./race.js":31,"./reduce.js":32,"./settle.js":34,"./some.js":35,"./synchronous_inspection.js":36,"./thenables.js":37,"./timers.js":38,"./using.js":39,"./util.js":40,"_process":50}],26:[function(require,module,exports){
+},{"./any.js":7,"./async.js":8,"./call_get.js":10,"./cancel.js":11,"./captured_trace.js":12,"./catch_filter.js":13,"./direct_resolve.js":14,"./each.js":15,"./errors.js":16,"./errors_api_rejection":17,"./filter.js":19,"./finally.js":20,"./generators.js":21,"./join.js":22,"./map.js":23,"./nodeify.js":24,"./progress.js":25,"./promise_array.js":27,"./promise_resolver.js":28,"./promisify.js":29,"./props.js":30,"./race.js":32,"./reduce.js":33,"./settle.js":35,"./some.js":36,"./synchronous_inspection.js":37,"./thenables.js":38,"./timers.js":39,"./using.js":40,"./util.js":41,"_process":51}],27:[function(require,module,exports){
 "use strict";
 module.exports = function(Promise, INTERNAL, tryConvertToPromise,
     apiRejection) {
@@ -5301,7 +5676,7 @@ PromiseArray.prototype.getActualLength = function (len) {
 return PromiseArray;
 };
 
-},{"./util.js":40}],27:[function(require,module,exports){
+},{"./util.js":41}],28:[function(require,module,exports){
 "use strict";
 var util = require("./util.js");
 var maybeWrapAsError = util.maybeWrapAsError;
@@ -5426,7 +5801,7 @@ PromiseResolver.prototype.toJSON = function () {
 
 module.exports = PromiseResolver;
 
-},{"./errors.js":15,"./es5.js":17,"./util.js":40}],28:[function(require,module,exports){
+},{"./errors.js":16,"./es5.js":18,"./util.js":41}],29:[function(require,module,exports){
 "use strict";
 module.exports = function(Promise, INTERNAL) {
 var THIS = {};
@@ -5738,7 +6113,7 @@ Promise.promisifyAll = function (target, options) {
 };
 
 
-},{"./errors":15,"./promise_resolver.js":27,"./util.js":40}],29:[function(require,module,exports){
+},{"./errors":16,"./promise_resolver.js":28,"./util.js":41}],30:[function(require,module,exports){
 "use strict";
 module.exports = function(Promise, PromiseArray, tryConvertToPromise) {
 var util = require("./util.js");
@@ -5819,7 +6194,7 @@ Promise.props = function (promises) {
 };
 };
 
-},{"./errors_api_rejection":16,"./es5.js":17,"./util.js":40}],30:[function(require,module,exports){
+},{"./errors_api_rejection":17,"./es5.js":18,"./util.js":41}],31:[function(require,module,exports){
 "use strict";
 function arrayMove(src, srcIndex, dst, dstIndex, len) {
     for (var j = 0; j < len; ++j) {
@@ -5913,7 +6288,7 @@ Queue.prototype._resizeTo = function (capacity) {
 
 module.exports = Queue;
 
-},{}],31:[function(require,module,exports){
+},{}],32:[function(require,module,exports){
 "use strict";
 module.exports = function(Promise, INTERNAL, tryConvertToPromise) {
 var apiRejection = require("./errors_api_rejection.js")(Promise);
@@ -5962,7 +6337,7 @@ Promise.prototype.race = function () {
 
 };
 
-},{"./errors_api_rejection.js":16,"./util.js":40}],32:[function(require,module,exports){
+},{"./errors_api_rejection.js":17,"./util.js":41}],33:[function(require,module,exports){
 "use strict";
 module.exports = function(Promise,
                           PromiseArray,
@@ -6125,7 +6500,7 @@ Promise.reduce = function (promises, fn, initialValue, _each) {
 };
 };
 
-},{"./util.js":40}],33:[function(require,module,exports){
+},{"./util.js":41}],34:[function(require,module,exports){
 (function (process){
 "use strict";
 var schedule;
@@ -6155,7 +6530,7 @@ else {
 module.exports = schedule;
 
 }).call(this,require('_process'))
-},{"_process":50}],34:[function(require,module,exports){
+},{"_process":51}],35:[function(require,module,exports){
 "use strict";
 module.exports =
     function(Promise, PromiseArray) {
@@ -6198,7 +6573,7 @@ Promise.prototype.settle = function () {
 };
 };
 
-},{"./util.js":40}],35:[function(require,module,exports){
+},{"./util.js":41}],36:[function(require,module,exports){
 "use strict";
 module.exports =
 function(Promise, PromiseArray, apiRejection) {
@@ -6330,7 +6705,7 @@ Promise.prototype.some = function (howMany) {
 Promise._SomePromiseArray = SomePromiseArray;
 };
 
-},{"./errors.js":15,"./util.js":40}],36:[function(require,module,exports){
+},{"./errors.js":16,"./util.js":41}],37:[function(require,module,exports){
 "use strict";
 module.exports = function(Promise) {
 function PromiseInspection(promise) {
@@ -6427,7 +6802,7 @@ Promise.prototype.reason = function() {
 Promise.PromiseInspection = PromiseInspection;
 };
 
-},{}],37:[function(require,module,exports){
+},{}],38:[function(require,module,exports){
 "use strict";
 module.exports = function(Promise, INTERNAL) {
 var util = require("./util.js");
@@ -6513,7 +6888,7 @@ function doThenable(x, then, context) {
 return tryConvertToPromise;
 };
 
-},{"./util.js":40}],38:[function(require,module,exports){
+},{"./util.js":41}],39:[function(require,module,exports){
 "use strict";
 module.exports = function(Promise, INTERNAL, tryConvertToPromise) {
 var util = require("./util.js");
@@ -6589,7 +6964,7 @@ Promise.prototype.timeout = function (ms, message) {
 
 };
 
-},{"./util.js":40}],39:[function(require,module,exports){
+},{"./util.js":41}],40:[function(require,module,exports){
 "use strict";
 module.exports = function (Promise, apiRejection, tryConvertToPromise,
     createContext) {
@@ -6793,7 +7168,7 @@ module.exports = function (Promise, apiRejection, tryConvertToPromise,
 
 };
 
-},{"./errors.js":15,"./util.js":40}],40:[function(require,module,exports){
+},{"./errors.js":16,"./util.js":41}],41:[function(require,module,exports){
 "use strict";
 var es5 = require("./es5.js");
 var canEvaluate = typeof navigator == "undefined";
@@ -7057,7 +7432,7 @@ var ret = {
 try {throw new Error(); } catch (e) {ret.lastLineError = e;}
 module.exports = ret;
 
-},{"./es5.js":17}],41:[function(require,module,exports){
+},{"./es5.js":18}],42:[function(require,module,exports){
 
 /**
  * This is the web browser implementation of `debug()`.
@@ -7217,7 +7592,7 @@ function load() {
 
 exports.enable(load());
 
-},{"./debug":42}],42:[function(require,module,exports){
+},{"./debug":43}],43:[function(require,module,exports){
 
 /**
  * This is the common logic for both the Node.js and web browser
@@ -7416,7 +7791,7 @@ function coerce(val) {
   return val;
 }
 
-},{"ms":43}],43:[function(require,module,exports){
+},{"ms":44}],44:[function(require,module,exports){
 /**
  * Helpers.
  */
@@ -7529,9 +7904,9 @@ function plural(ms, n, name) {
   return Math.ceil(ms / n) + ' ' + name + 's';
 }
 
-},{}],44:[function(require,module,exports){
-
 },{}],45:[function(require,module,exports){
+
+},{}],46:[function(require,module,exports){
 /*!
  * The buffer module from node.js, for the browser.
  *
@@ -8849,7 +9224,7 @@ function decodeUtf8Char (str) {
   }
 }
 
-},{"base64-js":46,"ieee754":47,"is-array":48}],46:[function(require,module,exports){
+},{"base64-js":47,"ieee754":48,"is-array":49}],47:[function(require,module,exports){
 var lookup = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
 
 ;(function (exports) {
@@ -8975,7 +9350,7 @@ var lookup = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
 	exports.fromByteArray = uint8ToBase64
 }(typeof exports === 'undefined' ? (this.base64js = {}) : exports))
 
-},{}],47:[function(require,module,exports){
+},{}],48:[function(require,module,exports){
 exports.read = function(buffer, offset, isLE, mLen, nBytes) {
   var e, m,
       eLen = nBytes * 8 - mLen - 1,
@@ -9061,7 +9436,7 @@ exports.write = function(buffer, value, offset, isLE, mLen, nBytes) {
   buffer[offset + i - d] |= s * 128;
 };
 
-},{}],48:[function(require,module,exports){
+},{}],49:[function(require,module,exports){
 
 /**
  * isArray
@@ -9096,7 +9471,7 @@ module.exports = isArray || function (val) {
   return !! val && '[object Array]' == str.call(val);
 };
 
-},{}],49:[function(require,module,exports){
+},{}],50:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -9399,7 +9774,7 @@ function isUndefined(arg) {
   return arg === void 0;
 }
 
-},{}],50:[function(require,module,exports){
+},{}],51:[function(require,module,exports){
 // shim for using process in browser
 
 var process = module.exports = {};
@@ -9458,7 +9833,7 @@ process.chdir = function (dir) {
 };
 process.umask = function() { return 0; };
 
-},{}],51:[function(require,module,exports){
+},{}],52:[function(require,module,exports){
 "use strict";
 
 var utils = require('./utils');
@@ -10266,7 +10641,7 @@ AbstractPouchDB.prototype.registerDependentDatabase =
   });
 });
 
-},{"./changes":62,"./deps/errors":68,"./deps/upsert":72,"./merge":77,"./utils":82,"events":49}],52:[function(require,module,exports){
+},{"./changes":63,"./deps/errors":69,"./deps/upsert":73,"./merge":78,"./utils":83,"events":50}],53:[function(require,module,exports){
 (function (process,Buffer){
 "use strict";
 
@@ -11334,7 +11709,7 @@ HttpPouch.valid = function () {
 module.exports = HttpPouch;
 
 }).call(this,require('_process'),require("buffer").Buffer)
-},{"../../deps/errors":68,"../../utils":82,"_process":50,"buffer":45,"debug":41}],53:[function(require,module,exports){
+},{"../../deps/errors":69,"../../utils":83,"_process":51,"buffer":46,"debug":42}],54:[function(require,module,exports){
 'use strict';
 
 var utils = require('../../utils');
@@ -11688,7 +12063,7 @@ function idbBulkDocs(req, opts, api, idb, Changes, callback) {
 }
 
 module.exports = idbBulkDocs;
-},{"../../deps/errors":68,"../../utils":82,"./idb-constants":54,"./idb-utils":55}],54:[function(require,module,exports){
+},{"../../deps/errors":69,"../../utils":83,"./idb-constants":55,"./idb-utils":56}],55:[function(require,module,exports){
 'use strict';
 
 // IndexedDB requires a versioned database structure, so we use the
@@ -11715,7 +12090,7 @@ exports.META_STORE = 'meta-store';
 exports.LOCAL_STORE = 'local-store';
 // Where we detect blob support
 exports.DETECT_BLOB_SUPPORT_STORE = 'detect-blob-support';
-},{}],55:[function(require,module,exports){
+},{}],56:[function(require,module,exports){
 (function (process){
 'use strict';
 
@@ -11950,7 +12325,7 @@ exports.compactRevs = function (revs, docId, txn) {
 };
 
 }).call(this,require('_process'))
-},{"../../deps/errors":68,"../../utils":82,"./idb-constants":54,"_process":50}],56:[function(require,module,exports){
+},{"../../deps/errors":69,"../../utils":83,"./idb-constants":55,"_process":51}],57:[function(require,module,exports){
 (function (process){
 'use strict';
 
@@ -13066,9 +13441,9 @@ IdbPouch.Changes = new utils.Changes();
 module.exports = IdbPouch;
 
 }).call(this,require('_process'))
-},{"../../deps/errors":68,"../../merge":77,"../../utils":82,"./idb-bulk-docs":53,"./idb-constants":54,"./idb-utils":55,"_process":50}],57:[function(require,module,exports){
+},{"../../deps/errors":69,"../../merge":78,"../../utils":83,"./idb-bulk-docs":54,"./idb-constants":55,"./idb-utils":56,"_process":51}],58:[function(require,module,exports){
 module.exports = ['idb', 'websql'];
-},{}],58:[function(require,module,exports){
+},{}],59:[function(require,module,exports){
 'use strict';
 
 var utils = require('../../utils');
@@ -13393,7 +13768,7 @@ function websqlBulkDocs(req, opts, api, db, Changes, callback) {
 }
 
 module.exports = websqlBulkDocs;
-},{"../../deps/errors":68,"../../utils":82,"./websql-constants":59,"./websql-utils":60}],59:[function(require,module,exports){
+},{"../../deps/errors":69,"../../utils":83,"./websql-constants":60,"./websql-utils":61}],60:[function(require,module,exports){
 'use strict';
 
 function quote(str) {
@@ -13417,7 +13792,7 @@ exports.META_STORE = quote('metadata-store');
 exports.ATTACH_AND_SEQ_STORE = quote('attach-seq-store');
 
 
-},{}],60:[function(require,module,exports){
+},{}],61:[function(require,module,exports){
 'use strict';
 
 var utils = require('../../utils');
@@ -13605,7 +13980,7 @@ module.exports = {
   unknownError: unknownError,
   getSize: getSize
 };
-},{"../../deps/errors":68,"../../utils":82,"./websql-constants":59}],61:[function(require,module,exports){
+},{"../../deps/errors":69,"../../utils":83,"./websql-constants":60}],62:[function(require,module,exports){
 'use strict';
 
 var utils = require('../../utils');
@@ -14627,7 +15002,7 @@ WebSqlPouch.Changes = new utils.Changes();
 
 module.exports = WebSqlPouch;
 
-},{"../../deps/errors":68,"../../deps/parse-hex":70,"../../merge":77,"../../utils":82,"./websql-bulk-docs":58,"./websql-constants":59,"./websql-utils":60}],62:[function(require,module,exports){
+},{"../../deps/errors":69,"../../deps/parse-hex":71,"../../merge":78,"../../utils":83,"./websql-bulk-docs":59,"./websql-constants":60,"./websql-utils":61}],63:[function(require,module,exports){
 'use strict';
 var utils = require('./utils');
 var merge = require('./merge');
@@ -14883,7 +15258,7 @@ Changes.prototype.filterChanges = function (opts) {
     });
   }
 };
-},{"./deps/errors":68,"./evalFilter":74,"./evalView":75,"./merge":77,"./utils":82,"events":49}],63:[function(require,module,exports){
+},{"./deps/errors":69,"./evalFilter":75,"./evalView":76,"./merge":78,"./utils":83,"events":50}],64:[function(require,module,exports){
 'use strict';
 
 var utils = require('./utils');
@@ -14979,7 +15354,7 @@ Checkpointer.prototype.getCheckpoint = function () {
 
 module.exports = Checkpointer;
 
-},{"./utils":82,"pouchdb-collate":104}],64:[function(require,module,exports){
+},{"./utils":83,"pouchdb-collate":105}],65:[function(require,module,exports){
 (function (process,global){
 /*globals cordova */
 "use strict";
@@ -15151,7 +15526,7 @@ PouchDB.debug = require('debug');
 module.exports = PouchDB;
 
 }).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./adapter":51,"./taskqueue":81,"./utils":82,"_process":50,"debug":41}],65:[function(require,module,exports){
+},{"./adapter":52,"./taskqueue":82,"./utils":83,"_process":51,"debug":42}],66:[function(require,module,exports){
 "use strict";
 
 var createBlob = require('./blob.js');
@@ -15341,7 +15716,7 @@ function ajax(options, adapterCallback) {
 
 module.exports = ajax;
 
-},{"../utils":82,"./blob.js":66,"./errors":68}],66:[function(require,module,exports){
+},{"../utils":83,"./blob.js":67,"./errors":69}],67:[function(require,module,exports){
 (function (global){
 "use strict";
 
@@ -15373,7 +15748,7 @@ module.exports = createBlob;
 
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],67:[function(require,module,exports){
+},{}],68:[function(require,module,exports){
 'use strict';
 exports.Map = LazyMap; // TODO: use ES6 map
 exports.Set = LazySet; // TODO: use ES6 set
@@ -15444,7 +15819,7 @@ LazySet.prototype.has = function (key) {
 LazySet.prototype["delete"] = function (key) {
   return this.store["delete"](key);
 };
-},{}],68:[function(require,module,exports){
+},{}],69:[function(require,module,exports){
 "use strict";
 
 function PouchError(opts) {
@@ -15704,7 +16079,7 @@ exports.generateErrorFromResponse = function (res) {
   return error;
 };
 
-},{}],69:[function(require,module,exports){
+},{}],70:[function(require,module,exports){
 (function (process,global){
 'use strict';
 
@@ -15822,7 +16197,7 @@ module.exports = function (data, callback) {
 };
 
 }).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"_process":50,"crypto":44,"spark-md5":113}],70:[function(require,module,exports){
+},{"_process":51,"crypto":45,"spark-md5":114}],71:[function(require,module,exports){
 'use strict';
 
 //
@@ -15890,7 +16265,7 @@ function parseHexString(str, encoding) {
 }
 
 module.exports = parseHexString;
-},{}],71:[function(require,module,exports){
+},{}],72:[function(require,module,exports){
 'use strict';
 
 // originally parseUri 1.2.2, now patched by us
@@ -15936,7 +16311,7 @@ function parseUri(str) {
 
 
 module.exports = parseUri;
-},{}],72:[function(require,module,exports){
+},{}],73:[function(require,module,exports){
 'use strict';
 var Promise = require('../utils').Promise;
 
@@ -15987,7 +16362,7 @@ module.exports = function (db, docId, diffFun, cb) {
   }
 };
 
-},{"../utils":82}],73:[function(require,module,exports){
+},{"../utils":83}],74:[function(require,module,exports){
 "use strict";
 
 // BEGIN Math.uuid.js
@@ -16072,7 +16447,7 @@ function uuid(len, radix) {
 module.exports = uuid;
 
 
-},{}],74:[function(require,module,exports){
+},{}],75:[function(require,module,exports){
 'use strict';
 
 module.exports = evalFilter;
@@ -16084,7 +16459,7 @@ function evalFilter(input) {
     ' })()'
   ].join(''));
 }
-},{}],75:[function(require,module,exports){
+},{}],76:[function(require,module,exports){
 'use strict';
 
 module.exports = evalView;
@@ -16106,7 +16481,7 @@ function evalView(input) {
     '})()'
   ].join('\n'));
 }
-},{}],76:[function(require,module,exports){
+},{}],77:[function(require,module,exports){
 (function (process){
 "use strict";
 
@@ -16136,7 +16511,7 @@ if (!process.browser) {
 }
 
 }).call(this,require('_process'))
-},{"./adapters/http/http":52,"./adapters/idb/idb":56,"./adapters/leveldb/leveldb":44,"./adapters/websql/websql":61,"./deps/ajax":65,"./deps/errors":68,"./replicate":78,"./setup":79,"./sync":80,"./utils":82,"./version":83,"_process":50,"pouchdb-extend":106,"pouchdb-mapreduce":109}],77:[function(require,module,exports){
+},{"./adapters/http/http":53,"./adapters/idb/idb":57,"./adapters/leveldb/leveldb":45,"./adapters/websql/websql":62,"./deps/ajax":66,"./deps/errors":69,"./replicate":79,"./setup":80,"./sync":81,"./utils":83,"./version":84,"_process":51,"pouchdb-extend":107,"pouchdb-mapreduce":110}],78:[function(require,module,exports){
 'use strict';
 var extend = require('pouchdb-extend');
 
@@ -16438,7 +16813,7 @@ PouchMerge.rootToLeaf = function (tree) {
 
 module.exports = PouchMerge;
 
-},{"pouchdb-extend":106}],78:[function(require,module,exports){
+},{"pouchdb-extend":107}],79:[function(require,module,exports){
 'use strict';
 
 var utils = require('./utils');
@@ -17037,7 +17412,7 @@ function replicateWrapper(src, target, opts, callback) {
   return replicateRet;
 }
 
-},{"./checkpointer":63,"./utils":82,"events":49}],79:[function(require,module,exports){
+},{"./checkpointer":64,"./utils":83,"events":50}],80:[function(require,module,exports){
 "use strict";
 
 var PouchDB = require("./constructor");
@@ -17235,7 +17610,7 @@ PouchDB.defaults = function (defaultOpts) {
 
 module.exports = PouchDB;
 
-},{"./adapters/preferredAdapters.js":57,"./constructor":64,"./utils":82,"events":49}],80:[function(require,module,exports){
+},{"./adapters/preferredAdapters.js":58,"./constructor":65,"./utils":83,"events":50}],81:[function(require,module,exports){
 'use strict';
 var utils = require('./utils');
 var replication = require('./replicate');
@@ -17414,7 +17789,7 @@ Sync.prototype.cancel = function () {
   }
 };
 
-},{"./replicate":78,"./utils":82,"events":49}],81:[function(require,module,exports){
+},{"./replicate":79,"./utils":83,"events":50}],82:[function(require,module,exports){
 'use strict';
 
 module.exports = TaskQueue;
@@ -17484,7 +17859,7 @@ TaskQueue.prototype.addTask = function (name, parameters) {
   }
 };
 
-},{}],82:[function(require,module,exports){
+},{}],83:[function(require,module,exports){
 (function (process,global){
 /*jshint strict: false */
 /*global chrome */
@@ -18436,10 +18811,10 @@ exports.safeJsonStringify = function safeJsonStringify(json) {
 };
 
 }).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./deps/ajax":65,"./deps/blob":66,"./deps/buffer":44,"./deps/collections":67,"./deps/errors":68,"./deps/md5":69,"./deps/parse-uri":71,"./deps/uuid":73,"./merge":77,"_process":50,"argsarray":84,"bluebird":89,"debug":41,"events":49,"inherits":85,"pouchdb-extend":106,"vuvuzela":114}],83:[function(require,module,exports){
+},{"./deps/ajax":66,"./deps/blob":67,"./deps/buffer":45,"./deps/collections":68,"./deps/errors":69,"./deps/md5":70,"./deps/parse-uri":72,"./deps/uuid":74,"./merge":78,"_process":51,"argsarray":85,"bluebird":90,"debug":42,"events":50,"inherits":86,"pouchdb-extend":107,"vuvuzela":115}],84:[function(require,module,exports){
 module.exports = "3.2.1";
 
-},{}],84:[function(require,module,exports){
+},{}],85:[function(require,module,exports){
 'use strict';
 
 module.exports = argsArray;
@@ -18459,7 +18834,7 @@ function argsArray(fun) {
     }
   };
 }
-},{}],85:[function(require,module,exports){
+},{}],86:[function(require,module,exports){
 if (typeof Object.create === 'function') {
   // implementation from standard node.js 'util' module
   module.exports = function inherits(ctor, superCtor) {
@@ -18484,13 +18859,13 @@ if (typeof Object.create === 'function') {
   }
 }
 
-},{}],86:[function(require,module,exports){
+},{}],87:[function(require,module,exports){
 'use strict';
 
 module.exports = INTERNAL;
 
 function INTERNAL() {}
-},{}],87:[function(require,module,exports){
+},{}],88:[function(require,module,exports){
 'use strict';
 var Promise = require('./promise');
 var reject = require('./reject');
@@ -18534,7 +18909,7 @@ function all(iterable) {
     }
   }
 }
-},{"./INTERNAL":86,"./handlers":88,"./promise":90,"./reject":93,"./resolve":94}],88:[function(require,module,exports){
+},{"./INTERNAL":87,"./handlers":89,"./promise":91,"./reject":94,"./resolve":95}],89:[function(require,module,exports){
 'use strict';
 var tryCatch = require('./tryCatch');
 var resolveThenable = require('./resolveThenable');
@@ -18580,14 +18955,14 @@ function getThen(obj) {
     };
   }
 }
-},{"./resolveThenable":95,"./states":96,"./tryCatch":97}],89:[function(require,module,exports){
+},{"./resolveThenable":96,"./states":97,"./tryCatch":98}],90:[function(require,module,exports){
 module.exports = exports = require('./promise');
 
 exports.resolve = require('./resolve');
 exports.reject = require('./reject');
 exports.all = require('./all');
 exports.race = require('./race');
-},{"./all":87,"./promise":90,"./race":92,"./reject":93,"./resolve":94}],90:[function(require,module,exports){
+},{"./all":88,"./promise":91,"./race":93,"./reject":94,"./resolve":95}],91:[function(require,module,exports){
 'use strict';
 
 var unwrap = require('./unwrap');
@@ -18633,7 +19008,7 @@ Promise.prototype.then = function (onFulfilled, onRejected) {
   return promise;
 };
 
-},{"./INTERNAL":86,"./queueItem":91,"./resolveThenable":95,"./states":96,"./unwrap":98}],91:[function(require,module,exports){
+},{"./INTERNAL":87,"./queueItem":92,"./resolveThenable":96,"./states":97,"./unwrap":99}],92:[function(require,module,exports){
 'use strict';
 var handlers = require('./handlers');
 var unwrap = require('./unwrap');
@@ -18662,7 +19037,7 @@ QueueItem.prototype.callRejected = function (value) {
 QueueItem.prototype.otherCallRejected = function (value) {
   unwrap(this.promise, this.onRejected, value);
 };
-},{"./handlers":88,"./unwrap":98}],92:[function(require,module,exports){
+},{"./handlers":89,"./unwrap":99}],93:[function(require,module,exports){
 'use strict';
 var Promise = require('./promise');
 var reject = require('./reject');
@@ -18703,7 +19078,7 @@ function race(iterable) {
     });
   }
 }
-},{"./INTERNAL":86,"./handlers":88,"./promise":90,"./reject":93,"./resolve":94}],93:[function(require,module,exports){
+},{"./INTERNAL":87,"./handlers":89,"./promise":91,"./reject":94,"./resolve":95}],94:[function(require,module,exports){
 'use strict';
 
 var Promise = require('./promise');
@@ -18715,7 +19090,7 @@ function reject(reason) {
 	var promise = new Promise(INTERNAL);
 	return handlers.reject(promise, reason);
 }
-},{"./INTERNAL":86,"./handlers":88,"./promise":90}],94:[function(require,module,exports){
+},{"./INTERNAL":87,"./handlers":89,"./promise":91}],95:[function(require,module,exports){
 'use strict';
 
 var Promise = require('./promise');
@@ -18750,7 +19125,7 @@ function resolve(value) {
       return EMPTYSTRING;
   }
 }
-},{"./INTERNAL":86,"./handlers":88,"./promise":90}],95:[function(require,module,exports){
+},{"./INTERNAL":87,"./handlers":89,"./promise":91}],96:[function(require,module,exports){
 'use strict';
 var handlers = require('./handlers');
 var tryCatch = require('./tryCatch');
@@ -18783,13 +19158,13 @@ function safelyResolveThenable(self, thenable) {
   }
 }
 exports.safely = safelyResolveThenable;
-},{"./handlers":88,"./tryCatch":97}],96:[function(require,module,exports){
+},{"./handlers":89,"./tryCatch":98}],97:[function(require,module,exports){
 // Lazy man's symbols for states
 
 exports.REJECTED = ['REJECTED'];
 exports.FULFILLED = ['FULFILLED'];
 exports.PENDING = ['PENDING'];
-},{}],97:[function(require,module,exports){
+},{}],98:[function(require,module,exports){
 'use strict';
 
 module.exports = tryCatch;
@@ -18805,7 +19180,7 @@ function tryCatch(func, value) {
   }
   return out;
 }
-},{}],98:[function(require,module,exports){
+},{}],99:[function(require,module,exports){
 'use strict';
 
 var immediate = require('immediate');
@@ -18827,7 +19202,7 @@ function unwrap(promise, func, value) {
     }
   });
 }
-},{"./handlers":88,"immediate":99}],99:[function(require,module,exports){
+},{"./handlers":89,"immediate":100}],100:[function(require,module,exports){
 'use strict';
 var types = [
   require('./nextTick'),
@@ -18869,7 +19244,7 @@ function immediate(task) {
     scheduleDrain();
   }
 }
-},{"./messageChannel":100,"./mutation.js":101,"./nextTick":44,"./stateChange":102,"./timeout":103}],100:[function(require,module,exports){
+},{"./messageChannel":101,"./mutation.js":102,"./nextTick":45,"./stateChange":103,"./timeout":104}],101:[function(require,module,exports){
 (function (global){
 'use strict';
 
@@ -18890,7 +19265,7 @@ exports.install = function (func) {
   };
 };
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],101:[function(require,module,exports){
+},{}],102:[function(require,module,exports){
 (function (global){
 'use strict';
 //based off rsvp https://github.com/tildeio/rsvp.js
@@ -18915,7 +19290,7 @@ exports.install = function (handle) {
   };
 };
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],102:[function(require,module,exports){
+},{}],103:[function(require,module,exports){
 (function (global){
 'use strict';
 
@@ -18942,7 +19317,7 @@ exports.install = function (handle) {
   };
 };
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],103:[function(require,module,exports){
+},{}],104:[function(require,module,exports){
 'use strict';
 exports.test = function () {
   return true;
@@ -18953,7 +19328,7 @@ exports.install = function (t) {
     setTimeout(t, 0);
   };
 };
-},{}],104:[function(require,module,exports){
+},{}],105:[function(require,module,exports){
 'use strict';
 
 var MIN_MAGNITUDE = -324; // verified by -Number.MIN_VALUE
@@ -19308,7 +19683,7 @@ function numToIndexableString(num) {
   return result;
 }
 
-},{"./utils":105}],105:[function(require,module,exports){
+},{"./utils":106}],106:[function(require,module,exports){
 'use strict';
 
 function pad(str, padWith, upToLength) {
@@ -19379,7 +19754,7 @@ exports.intToDecimalForm = function (int) {
 
   return result;
 };
-},{}],106:[function(require,module,exports){
+},{}],107:[function(require,module,exports){
 "use strict";
 
 // Extends method
@@ -19560,7 +19935,7 @@ module.exports = extend;
 
 
 
-},{}],107:[function(require,module,exports){
+},{}],108:[function(require,module,exports){
 'use strict';
 
 var upsert = require('./upsert');
@@ -19639,7 +20014,7 @@ module.exports = function (opts) {
   });
 };
 
-},{"./upsert":111,"./utils":112}],108:[function(require,module,exports){
+},{"./upsert":112,"./utils":113}],109:[function(require,module,exports){
 'use strict';
 
 module.exports = function (func, emit, sum, log, isArray, toJSON) {
@@ -19647,7 +20022,7 @@ module.exports = function (func, emit, sum, log, isArray, toJSON) {
   return eval("'use strict'; (" + func.replace(/;\s*$/, "") + ");");
 };
 
-},{}],109:[function(require,module,exports){
+},{}],110:[function(require,module,exports){
 (function (process){
 'use strict';
 
@@ -20450,7 +20825,7 @@ function NotFoundError(message) {
 utils.inherits(NotFoundError, Error);
 
 }).call(this,require('_process'))
-},{"./create-view":107,"./evalfunc":108,"./taskqueue":110,"./utils":112,"_process":50,"pouchdb-collate":104}],110:[function(require,module,exports){
+},{"./create-view":108,"./evalfunc":109,"./taskqueue":111,"./utils":113,"_process":51,"pouchdb-collate":105}],111:[function(require,module,exports){
 'use strict';
 /*
  * Simple task queue to sequentialize actions. Assumes callbacks will eventually fire (once).
@@ -20475,7 +20850,7 @@ TaskQueue.prototype.finish = function () {
 
 module.exports = TaskQueue;
 
-},{"./utils":112}],111:[function(require,module,exports){
+},{"./utils":113}],112:[function(require,module,exports){
 'use strict';
 var Promise = require('./utils').Promise;
 
@@ -20518,7 +20893,7 @@ function tryAndPut(db, doc, diffFun) {
 
 module.exports = upsert;
 
-},{"./utils":112}],112:[function(require,module,exports){
+},{"./utils":113}],113:[function(require,module,exports){
 (function (process,global){
 'use strict';
 /* istanbul ignore if */
@@ -20619,7 +20994,7 @@ exports.MD5 = function (string) {
   }
 };
 }).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"_process":50,"argsarray":84,"crypto":44,"inherits":85,"lie":89,"pouchdb-extend":106,"spark-md5":113}],113:[function(require,module,exports){
+},{"_process":51,"argsarray":85,"crypto":45,"inherits":86,"lie":90,"pouchdb-extend":107,"spark-md5":114}],114:[function(require,module,exports){
 /*jshint bitwise:false*/
 /*global unescape*/
 
@@ -21220,7 +21595,7 @@ exports.MD5 = function (string) {
     return SparkMD5;
 }));
 
-},{}],114:[function(require,module,exports){
+},{}],115:[function(require,module,exports){
 'use strict';
 
 /**
@@ -21395,7 +21770,204 @@ exports.parse = function (str) {
   }
 };
 
-},{}],115:[function(require,module,exports){
+},{}],116:[function(require,module,exports){
+(function(window) {
+    var re = {
+        not_string: /[^s]/,
+        number: /[dief]/,
+        text: /^[^\x25]+/,
+        modulo: /^\x25{2}/,
+        placeholder: /^\x25(?:([1-9]\d*)\$|\(([^\)]+)\))?(\+)?(0|'[^$])?(-)?(\d+)?(?:\.(\d+))?([b-fiosuxX])/,
+        key: /^([a-z_][a-z_\d]*)/i,
+        key_access: /^\.([a-z_][a-z_\d]*)/i,
+        index_access: /^\[(\d+)\]/,
+        sign: /^[\+\-]/
+    }
+
+    function sprintf() {
+        var key = arguments[0], cache = sprintf.cache
+        if (!(cache[key] && cache.hasOwnProperty(key))) {
+            cache[key] = sprintf.parse(key)
+        }
+        return sprintf.format.call(null, cache[key], arguments)
+    }
+
+    sprintf.format = function(parse_tree, argv) {
+        var cursor = 1, tree_length = parse_tree.length, node_type = "", arg, output = [], i, k, match, pad, pad_character, pad_length, is_positive = true, sign = ""
+        for (i = 0; i < tree_length; i++) {
+            node_type = get_type(parse_tree[i])
+            if (node_type === "string") {
+                output[output.length] = parse_tree[i]
+            }
+            else if (node_type === "array") {
+                match = parse_tree[i] // convenience purposes only
+                if (match[2]) { // keyword argument
+                    arg = argv[cursor]
+                    for (k = 0; k < match[2].length; k++) {
+                        if (!arg.hasOwnProperty(match[2][k])) {
+                            throw new Error(sprintf("[sprintf] property '%s' does not exist", match[2][k]))
+                        }
+                        arg = arg[match[2][k]]
+                    }
+                }
+                else if (match[1]) { // positional argument (explicit)
+                    arg = argv[match[1]]
+                }
+                else { // positional argument (implicit)
+                    arg = argv[cursor++]
+                }
+
+                if (get_type(arg) == "function") {
+                    arg = arg()
+                }
+
+                if (re.not_string.test(match[8]) && (get_type(arg) != "number" && isNaN(arg))) {
+                    throw new TypeError(sprintf("[sprintf] expecting number but found %s", get_type(arg)))
+                }
+
+                if (re.number.test(match[8])) {
+                    is_positive = arg >= 0
+                }
+
+                switch (match[8]) {
+                    case "b":
+                        arg = arg.toString(2)
+                    break
+                    case "c":
+                        arg = String.fromCharCode(arg)
+                    break
+                    case "d":
+                    case "i":
+                        arg = parseInt(arg, 10)
+                    break
+                    case "e":
+                        arg = match[7] ? arg.toExponential(match[7]) : arg.toExponential()
+                    break
+                    case "f":
+                        arg = match[7] ? parseFloat(arg).toFixed(match[7]) : parseFloat(arg)
+                    break
+                    case "o":
+                        arg = arg.toString(8)
+                    break
+                    case "s":
+                        arg = ((arg = String(arg)) && match[7] ? arg.substring(0, match[7]) : arg)
+                    break
+                    case "u":
+                        arg = arg >>> 0
+                    break
+                    case "x":
+                        arg = arg.toString(16)
+                    break
+                    case "X":
+                        arg = arg.toString(16).toUpperCase()
+                    break
+                }
+                if (re.number.test(match[8]) && (!is_positive || match[3])) {
+                    sign = is_positive ? "+" : "-"
+                    arg = arg.toString().replace(re.sign, "")
+                }
+                else {
+                    sign = ""
+                }
+                pad_character = match[4] ? match[4] === "0" ? "0" : match[4].charAt(1) : " "
+                pad_length = match[6] - (sign + arg).length
+                pad = match[6] ? (pad_length > 0 ? str_repeat(pad_character, pad_length) : "") : ""
+                output[output.length] = match[5] ? sign + arg + pad : (pad_character === "0" ? sign + pad + arg : pad + sign + arg)
+            }
+        }
+        return output.join("")
+    }
+
+    sprintf.cache = {}
+
+    sprintf.parse = function(fmt) {
+        var _fmt = fmt, match = [], parse_tree = [], arg_names = 0
+        while (_fmt) {
+            if ((match = re.text.exec(_fmt)) !== null) {
+                parse_tree[parse_tree.length] = match[0]
+            }
+            else if ((match = re.modulo.exec(_fmt)) !== null) {
+                parse_tree[parse_tree.length] = "%"
+            }
+            else if ((match = re.placeholder.exec(_fmt)) !== null) {
+                if (match[2]) {
+                    arg_names |= 1
+                    var field_list = [], replacement_field = match[2], field_match = []
+                    if ((field_match = re.key.exec(replacement_field)) !== null) {
+                        field_list[field_list.length] = field_match[1]
+                        while ((replacement_field = replacement_field.substring(field_match[0].length)) !== "") {
+                            if ((field_match = re.key_access.exec(replacement_field)) !== null) {
+                                field_list[field_list.length] = field_match[1]
+                            }
+                            else if ((field_match = re.index_access.exec(replacement_field)) !== null) {
+                                field_list[field_list.length] = field_match[1]
+                            }
+                            else {
+                                throw new SyntaxError("[sprintf] failed to parse named argument key")
+                            }
+                        }
+                    }
+                    else {
+                        throw new SyntaxError("[sprintf] failed to parse named argument key")
+                    }
+                    match[2] = field_list
+                }
+                else {
+                    arg_names |= 2
+                }
+                if (arg_names === 3) {
+                    throw new Error("[sprintf] mixing positional and named placeholders is not (yet) supported")
+                }
+                parse_tree[parse_tree.length] = match
+            }
+            else {
+                throw new SyntaxError("[sprintf] unexpected placeholder")
+            }
+            _fmt = _fmt.substring(match[0].length)
+        }
+        return parse_tree
+    }
+
+    var vsprintf = function(fmt, argv, _argv) {
+        _argv = (argv || []).slice(0)
+        _argv.splice(0, 0, fmt)
+        return sprintf.apply(null, _argv)
+    }
+
+    /**
+     * helpers
+     */
+    function get_type(variable) {
+        return Object.prototype.toString.call(variable).slice(8, -1).toLowerCase()
+    }
+
+    function str_repeat(input, multiplier) {
+        return Array(multiplier + 1).join(input)
+    }
+
+    /**
+     * export to either browser or node.js
+     */
+    if (typeof exports !== "undefined") {
+        exports.sprintf = sprintf
+        exports.vsprintf = vsprintf
+    }
+    else {
+        window.sprintf = sprintf
+        window.vsprintf = vsprintf
+
+        if (typeof define === "function" && define.amd) {
+            define(function() {
+                return {
+                    sprintf: sprintf,
+                    vsprintf: vsprintf
+                }
+            })
+        }
+    }
+})(typeof window === "undefined" ? this : window);
+
+},{}],117:[function(require,module,exports){
 //     Underscore.js 1.7.0
 //     http://underscorejs.org
 //     (c) 2009-2014 Jeremy Ashkenas, DocumentCloud and Investigative Reporters & Editors

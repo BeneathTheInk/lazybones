@@ -63,9 +63,9 @@
 <p>Backbone puts all database requests under a single function, <code>Backbone.sync</code>. Lazybones overwrites this method to add support for PouchDB.</p><p>This method returns a promise that is fulfilled with the exact PouchDB result. This is very different from <code>Backbone.sync</code>, which returns the XHR object used to make the request. Since there is no XHR involved in a PouchDB request, we return the promise from PouchDB instead. This means that <code>doc.fetch()</code>, <code>doc.save()</code> and <code>doc.destroy()</code> all return promises as well.</p><p>This function is accessible directly via <code>Lazybones.sync</code>.</p><h4>Arguments</h4>
 <ul>
 <li><strong>method</strong> <em>string</em> - The CRUD action to perform on the document or database. Must be <code>create</code>, <code>read</code>, <code>update</code> or <code>delete</code>.</li>
-<li><strong>model</strong> <em>Document | Lazybones</em> - The document or database to perform the database action on.</li>
+<li><strong>model</strong> <em>Model | Collction</em> - The Backbone model or collection instance to perform the database action on.</li>
 <li><strong>options</strong> <em>object; optional</em> - An object of options to use while syncing. These options are available on any <code>.fetch()</code>, <code>.save()</code>, or <code>.destroy()</code> calls. The options are also passed directly to the PouchDB instance, so depending on the method, additional options are available.<ul>
-<li><strong>options.database</strong> <em>Lazybones</em> - An instance of Lazybones to use for the request. If this is not provided, <code>doc.collection</code> is used instead. Sync will produce an error if no database is provided.</li>
+<li><strong>options.pouch</strong> <em>PouchDB</em> - An instance of PouchDB to use for the request. If this is not provided, the database is inferred from the model provided. Sync will produce an error if no database can be located.</li>
 <li><strong>options.success</strong> <em>function</em> - A function that called when the sync completes successfully.</li>
 <li><strong>options.error</strong> <em>function</em> - A function that called when the sync cannot complete.</li>
 </ul>
@@ -76,12 +76,14 @@
             
             <div class="content"><div class='highlight'><pre><span class="hljs-keyword">var</span> _ = <span class="hljs-built_in">require</span>(<span class="hljs-string">"underscore"</span>),
     debug = <span class="hljs-built_in">require</span>(<span class="hljs-string">"debug"</span>)(<span class="hljs-string">"lazybones:sync"</span>),
-    utils = <span class="hljs-built_in">require</span>(<span class="hljs-string">"./utils"</span>),
-    Document = <span class="hljs-built_in">require</span>(<span class="hljs-string">"./document"</span>),
-    Database = <span class="hljs-built_in">require</span>(<span class="hljs-string">"./lazybones"</span>),
-    Promise = <span class="hljs-built_in">require</span>(<span class="hljs-string">"bluebird"</span>);
+    PouchDB = <span class="hljs-built_in">require</span>(<span class="hljs-string">"pouchdb"</span>),
+    Promise = <span class="hljs-built_in">require</span>(<span class="hljs-string">"bluebird"</span>),
+    utils = <span class="hljs-built_in">require</span>(<span class="hljs-string">"./utils"</span>);
 
 <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">noop</span><span class="hljs-params">()</span></span>{}
+
+<span class="hljs-keyword">var</span> FETCH_DOC_OPTS = [ <span class="hljs-string">"ajax"</span>, <span class="hljs-string">"conflicts"</span>, <span class="hljs-string">"attachments"</span>, <span class="hljs-string">"rev"</span>, <span class="hljs-string">"revs"</span> ],
+    FETCH_BULK_OPTS = [ <span class="hljs-string">"startkey"</span>, <span class="hljs-string">"endkey"</span>, <span class="hljs-string">"inclusive_end"</span>, <span class="hljs-string">"limit"</span>, <span class="hljs-string">"skip"</span>, <span class="hljs-string">"descending"</span>, <span class="hljs-string">"key"</span>, <span class="hljs-string">"keys"</span>, <span class="hljs-string">"stale"</span>, <span class="hljs-string">"conflicts"</span>, <span class="hljs-string">"attachments"</span> ];
 
 <span class="hljs-built_in">module</span>.exports = <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">sync</span><span class="hljs-params">(method, model, options)</span> </span>{
     <span class="hljs-keyword">if</span> (options == <span class="hljs-literal">null</span>) options = {};
@@ -89,66 +91,66 @@
     <span class="hljs-keyword">if</span> (!_.isFunction(options.error)) options.error = noop;
 
     <span class="hljs-keyword">var</span> promise = Promise.bind(<span class="hljs-keyword">this</span>).then(<span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> </span>{
-        <span class="hljs-keyword">var</span> isdoc, isdb, db, data, id, pouch_opts;
+        <span class="hljs-keyword">var</span> ismodel, iscol, db, data, id, pouch_opts;
 
-        isdoc = model <span class="hljs-keyword">instanceof</span> Document;
-        isdb = model <span class="hljs-keyword">instanceof</span> Database;
+        method = method.toLowerCase();
+        ismodel = utils.isBackboneModel(model);
+        iscol = utils.isBackboneCollection(model);
 
-        <span class="hljs-keyword">if</span> (!(isdoc || isdb)) {
-            <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> utils.LazyError(<span class="hljs-string">"UNKNOWN_ERROR"</span>, <span class="hljs-string">"Sync is expecting a valid document or database."</span>);
+        <span class="hljs-keyword">if</span> (!(ismodel || iscol)) {
+            <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> utils.LazyError(<span class="hljs-string">"UNKNOWN_ERROR"</span>, <span class="hljs-string">"Sync is expecting a Backbone model or collection."</span>);
         }
 
         db = options.database != <span class="hljs-literal">null</span> ? options.database :
-            isdb ? model : model.collection;
+            model.pouch != <span class="hljs-literal">null</span> ? model.pouch : 
+            model.collection ? model.collection.pouch : <span class="hljs-literal">null</span>;
 
-        <span class="hljs-keyword">if</span> (!(db <span class="hljs-keyword">instanceof</span> Database)) {
+        <span class="hljs-keyword">if</span> (!(db <span class="hljs-keyword">instanceof</span> PouchDB)) {
             <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> utils.LazyError(<span class="hljs-string">"MISSING_DB"</span>);
         }
 
-        data = model.toJSON();
-        id = data._id;
-
-        <span class="hljs-keyword">if</span> (isdoc) debug(<span class="hljs-string">"%s %s (%s)"</span>, method, id, db.name);
-        <span class="hljs-keyword">else</span> debug(<span class="hljs-string">"%s %s"</span>, method, db.name);
+        <span class="hljs-keyword">if</span> (ismodel) {
+            data = model.toJSON();
+            id = data._id;
+            debug(<span class="hljs-string">"%s %s (%s)"</span>, method, id, db._db_name);
+        } <span class="hljs-keyword">else</span> {
+            debug(<span class="hljs-string">"%s %s"</span>, method, db._db_name);
+        }
 
         <span class="hljs-keyword">switch</span> (method) {
             <span class="hljs-keyword">case</span> <span class="hljs-string">"read"</span>:
                 <span class="hljs-comment">// fetch single if document</span>
-                <span class="hljs-keyword">if</span> (isdoc) {
-                    pouch_opts = _.extend({
-                        conflicts: <span class="hljs-literal">true</span>,
-                        attachments: <span class="hljs-literal">false</span>
-                    }, options);
-
-                    <span class="hljs-keyword">return</span> Promise.cast(db.pouch.get(id, pouch_opts)).tap(options.success);
+                <span class="hljs-keyword">if</span> (ismodel) {
+                    <span class="hljs-keyword">return</span> Promise.cast(db.get(id, _.pick(options, FETCH_DOC_OPTS))).tap(options.success);
                 }
 
-                <span class="hljs-comment">// or all if it's a database</span>
-                <span class="hljs-keyword">else</span> {
-                    pouch_opts = _.extend({
-                        conflicts: <span class="hljs-literal">true</span>,
-                        attachments: <span class="hljs-literal">false</span>
-                    }, options, {
-                        include_docs: <span class="hljs-literal">true</span> <span class="hljs-comment">// always must include the full document</span>
-                    });
+                pouch_opts = _.extend(_.pick(options, FETCH_BULK_OPTS), {
+                    include_docs: <span class="hljs-literal">true</span> <span class="hljs-comment">// always must include the full document</span>
+                });
 
-                    <span class="hljs-keyword">return</span> Promise.cast(db.pouch.allDocs(pouch_opts)).tap(<span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(res)</span> </span>{
-                        options.success(_.pluck(res.rows, <span class="hljs-string">"doc"</span>));
-                    });
-                }
+                <span class="hljs-keyword">return</span> Promise.cast(
+                    options.query != <span class="hljs-literal">null</span> ?
+                    db.query(options.query, pouch_opts) :
+                    db.allDocs(pouch_opts)
+                ).tap(<span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(res)</span> </span>{
+                    options.success(_.pluck(res.rows, <span class="hljs-string">"doc"</span>));
+                });
 
             <span class="hljs-keyword">case</span> <span class="hljs-string">"create"</span>:
             <span class="hljs-keyword">case</span> <span class="hljs-string">"update"</span>:
             <span class="hljs-keyword">case</span> <span class="hljs-string">"delete"</span>:
                 <span class="hljs-comment">// create, update and delete only work on documents</span>
-                <span class="hljs-keyword">if</span> (!isdoc) {
-                    <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> utils.LazyError(<span class="hljs-string">"INVALID_DOCUMENT"</span>, <span class="hljs-string">"Sync can only "</span> + method + <span class="hljs-string">" documents."</span>);
+                <span class="hljs-keyword">if</span> (!ismodel) {
+                    <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> utils.LazyError(<span class="hljs-string">"INVALID_DOC"</span>, method);
                 }
 
-                <span class="hljs-keyword">return</span> db._pushWrite(data, method === <span class="hljs-string">"delete"</span>).tap(<span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(res)</span> </span>{
+                <span class="hljs-keyword">return</span> Promise.cast(db[method === <span class="hljs-string">"delete"</span> ? <span class="hljs-string">"remove"</span> : <span class="hljs-string">"put"</span>](data)).tap(<span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(res)</span> </span>{
                     <span class="hljs-comment">// update revision</span>
                     options.success({ _rev: res.rev });
                 });
+
+            <span class="hljs-keyword">default</span>:
+                <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> utils.LazyError(<span class="hljs-string">"INVALID_METHOD"</span>, method);
 
         }
     });
