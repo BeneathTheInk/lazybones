@@ -1,7 +1,7 @@
 {
 	"name": "lazybones",
 	"description": "An object-oriented abstraction of PouchDB using Backbone models and collections.",
-	"version": "0.2.0",
+	"version": "0.2.1",
 	"author": "Beneath the Ink <info@beneaththeink.com>",
 	"contributors": [
 		{
@@ -25,7 +25,7 @@
 	"main": "lib/lazybones.js",
 	"dependencies": {
 		"backbone": "~1.1.2",
-		"backbone-symlink": "~0.2.4",
+		"backbone-symlink": "~0.2.5",
 		"bluebird": "~2.8.1",
 		"debug": "~2.1.1",
 		"pouchdb": "~3.2.1",
