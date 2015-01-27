@@ -34,7 +34,7 @@ db.fetch().then(function() {
 });
 ```
 
-Using fetch, you can also retrieve specific subsets of documents, for example only those in a specific CouchDB view. Just add `filter: "myview"` to fetch options. All the other standard Backbone sync options are available too.
+Using fetch, you can also retrieve specific subsets of documents, for example only those in a specific CouchDB view. Just add `query: "myview"` to fetch options. All the other standard Backbone sync options are available too.
 
 Lazybones also provides a method for continuously listening to changes in the database and replicating them to the in-memory documents:
 
