@@ -98,7 +98,7 @@
         iscol = utils.isBackboneCollection(model);
 
         <span class="hljs-keyword">if</span> (!(ismodel || iscol)) {
-            <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> utils.LazyError(<span class="hljs-string">"UNKNOWN_ERROR"</span>, <span class="hljs-string">"Sync is expecting a Backbone model or collection."</span>);
+            <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> utils.LazyError(<span class="hljs-string">"Sync is expecting a Backbone model or collection."</span>);
         }
 
         db = options.database != <span class="hljs-literal">null</span> ? options.database :

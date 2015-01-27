@@ -2,7 +2,7 @@
  * Lazybones
  * (c) 2014 Beneath the Ink, Inc.
  * MIT License
- * Version 0.2.0
+ * Version 0.2.1
  */
 
 !function(e){if("object"==typeof exports&&"undefined"!=typeof module)module.exports=e();else if("function"==typeof define&&define.amd)define([],e);else{var f;"undefined"!=typeof window?f=window:"undefined"!=typeof global?f=global:"undefined"!=typeof self&&(f=self),f.Lazybones=e()}}(function(){var define,module,exports;return (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
@@ -102,7 +102,7 @@ module.exports = Backbone.Model.extend({
  * Document inherit methods from [Backbone Symlink](https://github.com/BeneathTheInk/backbone-symlink). This allows the document to have attribute id references to other documents.
  */
 require("backbone-symlink").configure(Document);
-},{"./sync":3,"./utils":4,"backbone":6,"backbone-symlink":5,"underscore":117}],2:[function(require,module,exports){
+},{"./sync":3,"./utils":4,"backbone":6,"backbone-symlink":5,"underscore":83}],2:[function(require,module,exports){
 /**
  * # Lazybones
  *
@@ -303,7 +303,7 @@ module.exports = Backbone.Collection.extend({
 	 * - **Lazybones.sync** _function_ - The Lazybones sync method. This replaces `Backbone.sync`.
 	 * - **Lazybones.extend** _function_ - Creates a subclass of Lazybones. This is the same method that Backbone uses.
 	 */
-	VERSION: '0.2.0',
+	VERSION: '0.2.1',
 	utils: utils,
 	sync: sync,
 	Document: Document,
@@ -311,7 +311,7 @@ module.exports = Backbone.Collection.extend({
 	PouchDB: PouchDB
 
 });
-},{"./document":1,"./sync":3,"./utils":4,"backbone":6,"bluebird":9,"pouchdb":77,"underscore":117}],3:[function(require,module,exports){
+},{"./document":1,"./sync":3,"./utils":4,"backbone":6,"bluebird":7,"pouchdb":43,"underscore":83}],3:[function(require,module,exports){
 /**
  * # Sync
  *
@@ -355,7 +355,7 @@ module.exports = function sync(method, model, options) {
 		iscol = utils.isBackboneCollection(model);
 
 		if (!(ismodel || iscol)) {
-			throw new utils.LazyError("UNKNOWN_ERROR", "Sync is expecting a Backbone model or collection.");
+			throw new utils.LazyError("Sync is expecting a Backbone model or collection.");
 		}
 
 		db = options.database != null ? options.database :
@@ -425,7 +425,7 @@ module.exports = function sync(method, model, options) {
 	// return the promise and model
 	return promise;
 }
-},{"./utils":4,"bluebird":9,"debug":42,"pouchdb":77,"underscore":117}],4:[function(require,module,exports){
+},{"./utils":4,"bluebird":7,"debug":8,"pouchdb":43,"underscore":83}],4:[function(require,module,exports){
 /**
  * # Utils
  *
@@ -573,7 +573,7 @@ exports.transformPouchError = function(e) {
 	nerr.pouch_name = e.name;
 	throw nerr;
 }
-},{"backbone":6,"backbone-symlink":5,"bluebird":9,"pouchdb":77,"sprintf-js":116,"underscore":117}],5:[function(require,module,exports){
+},{"backbone":6,"backbone-symlink":5,"bluebird":7,"pouchdb":43,"sprintf-js":82,"underscore":83}],5:[function(require,module,exports){
 (function(root, factory) {
 
 	// Set up Symlink appropriately for the environment
@@ -598,7 +598,7 @@ exports.transformPouchError = function(e) {
 		throw new Error("Symlink could not locate Backbone and/or Underscore.");
 	}
 
-}(this, function(root, _, Backbone) {
+})(this, function(root, _, Backbone) {
 
 	function Symlink(model, attr, col, options) {
 		// verify arguments
@@ -625,9 +625,6 @@ exports.transformPouchError = function(e) {
 		this.options = _.defaults(options || {}, {
 			collection: Backbone.Collection
 		});
-
-		// init
-		this.attach();
 	}
 
 	// Symlink types
@@ -670,9 +667,9 @@ exports.transformPouchError = function(e) {
 	_.extend(Symlink.prototype, Backbone.Events, {
 
 		// sets up the symlink
-		attach: function() {
-			// detach first before reattaching
-			this.detach();
+		activate: function() {
+			// deactivate first before reattaching
+			this.deactivate();
 
 			// full reset before beginning
 			this.reset(false);
@@ -689,17 +686,17 @@ exports.transformPouchError = function(e) {
 			// make it seem like it was only set once.
 			this.listenTo(this.model, "change:" + this.attribute, this.update);
 
-			// detach if the model is destroyed
-			this.listenTo(this.model, "destroy", this.detach);
+			// deactivate if the model is destroyed
+			this.listenTo(this.model, "destroy", this.deactivate);
 
-			// announce the attachment
-			this.trigger("attach");
+			// announce the activation
+			this.trigger("ready");
 
 			return this;
 		},
 
 		// takes down the symlink
-		detach : function() {
+		deactivate : function() {
 			if (!this.active) return this;
 
 			// record the real value
@@ -719,15 +716,15 @@ exports.transformPouchError = function(e) {
 			this.model.set(this.attribute, val);
 
 			// announce the detachment
-			this.trigger("detach");
+			this.trigger("close");
 
 			return this;
 		},
 
 		// tells the symlink to update the value in the model
 		update: function() {
-			var symlink, col, attr, type, listener, Collection,
-				val, model, subset, updateValue, models;
+			var symlink, col, attr, type, listener,
+				val, model, subset, models;
 
 			// prevent overlapping events
 			if (!this.active || this._updating) return;
@@ -736,7 +733,6 @@ exports.transformPouchError = function(e) {
 			symlink = this;
 			col = this.collection;
 			attr = this.attribute;
-			Collection = this.options.collection;
 
 			// annouce the update
 			this.trigger("update");
@@ -769,86 +765,41 @@ exports.transformPouchError = function(e) {
 				// array will return a sub collection
 				case Symlink.COLLECTION_LINK:
 
-					subset = this.subset;
+					subset = this.getSubset();
 
-					if (Symlink.isBackboneCollection(val)) {
-						// if the value is the subset, we just want to refresh the subset content
-						val = val === subset ? this.value : val.toArray();
+					// if the value is the subset, this is a regular update
+					if (val === subset) {
+						this.mergeValueWithSubset();
 					}
 
-					// parse the value into an array of ids
-					val = val.reduce(function(ids, m) {
-						if (Symlink.isBackboneModel(m)) m = m.id;
-						if (_.isString(m) && m !== "" && !_.contains(ids, m)) ids.push(m);
-						return ids;
-					}, []);
-
-					// set the real value to the set of ids
-					this.setValue(val);
-
-					// translate list of ids into a list of models
-					// not all models need to present immediately
-					models = val.map(function(id) {
-						return col.get(id);
-					}).filter(function(m) {
-						return m != null;
-					});
-
-					// make a new subset
-					if (subset == null) {
-						this.subset = subset = new Collection(models, {
-							comparator: function(m) {
-								var index, len;
-
-								if (_.isArray(symlink.value)) {
-									index = symlink.value.indexOf(m.id);
-									len = symlink.value.length;
-								} else {
-									index = -1;
-									len = this.length;
-								}
-								
-								// add at index or beginning if not valid otherwise the end
-								return index > 0 ? index : symlink.firstRun || !symlink.valid ? -1 : len;
-							}
-						});
-
-						// prepare models just like the parent does
-						if (col._prepareModel) subset._prepareModel = col._prepareModel.bind(col);
-
-						// listen to main collection for changes
-						this.listenTo(col, {
-							add: function(m, c, opts) {
-								if (_.contains(symlink.value, m.id)) subset.add(m);
-							},
-							remove: function(m, c, opts) {
-								subset.remove(m);
-							}
-						});
-
-						// generic function for updating the value from subset
-						updateValue = _.bind(function(opts, remove) {
-							if (opts.flush_link !== false) {
-								this.updateValueFromSubset(remove);
-								this.flushChanges();
-							}
-						}, this);
-
-						// listen to subset for changes
-						this.listenTo(subset, {
-							add:    function(m, c, opts) { updateValue(opts);       },
-							remove: function(m, c, opts) { updateValue(opts, m.id); },
-							reset:  function(c, opts)    { updateValue(opts);       }
-						});
-					}
-
-					// or just update the current subset
+					// otherwise normalize and reset
 					else {
-						subset.set(models, { merge: false, flush_link: false });
-					}
+						if (Symlink.isBackboneCollection(val)) val = val.toArray();
 
-					// set the validity
-					this.updateValidityFromSubset();
+						// parse the value into an array of ids
+						val = val.reduce(function(ids, m) {
+							if (Symlink.isBackboneModel(m)) m = m.id;
+							if (_.isString(m) && m !== "" && !_.contains(ids, m)) ids.push(m);
+							return ids;
+						}, []);
+
+						// set the real value to the set of ids
+						this.setValue(val);
+
+						// translate list of ids into a list of models
+						// not all models need to present immediately
+						models = val.map(function(id) {
+							return col.get(id);
+						}).filter(function(m) {
+							return m != null;
+						});
+
+						// reset the current subset
+						subset.reset(models, { flush_link: false });
+
+						// check subset is valid
+						this.checkSubsetValidity();
+					}
 
 					// set the subset as the virtual value
 					this.setVirtualValue(subset);
@@ -873,6 +824,7 @@ exports.transformPouchError = function(e) {
 							}
 						}, this);
 
+						this.addReference(model);
 						this.set(true, model);
 					}
 
@@ -906,7 +858,7 @@ exports.transformPouchError = function(e) {
 			this.flushChanges();
 
 			// and finish
-			this.firstRun = false;
+			this.isNew = false;
 			delete this._updating;
 
 			return this;
@@ -933,26 +885,26 @@ exports.transformPouchError = function(e) {
 		},
 
 		// sets the symlink's virtual value
-		setVirtualValue: function(val, write) {
+		setVirtualValue: function(val, write, opts) {
 			// set new value
 			this.virtual = val;
 
 			// write to the model if specified
-			if (write == null || write) this.writeVirtualValue();
+			if (write == null || write) this.writeVirtualValue(opts);
 			
 			return this;
 		},
 
 		// writes the virtual value to the model
-		writeVirtualValue: function() {
+		writeVirtualValue: function(opts) {
 			// only write the value if the symlink is active
 			if (!this.active) return this;
-			this.model.set(this.attribute, this.virtual || null);
+			this.model.set(this.attribute, this.virtual || null, opts);
 			return this;
 		},
 
 		// annouces changes to virtual value and validity
-		flushChanges: function() {
+		flushChanges: function(options) {
 			if (!this.active) return this;
 
 			// valid
@@ -970,8 +922,69 @@ exports.transformPouchError = function(e) {
 			return this;
 		},
 
+		getSubset: function() {
+			if (this.subset != null) return this.subset;
+
+			var symlink, subset, col, updateValue;
+
+			symlink = this;
+			col = this.collection;
+
+			// create subset from backbone collection
+			this.subset = subset = new (this.options.collection)(null, {
+				comparator: function(m) {
+					var index, len,
+						val = symlink.value;
+
+					if (_.isArray(val)) {
+						index = val.indexOf(m.id);
+						len = val.length;
+					} else {
+						index = -1;
+						len = this.length;
+					}
+					
+					// add at index or the end
+					return index > -1 ? index : len;
+				}
+			});
+
+			// prepare models just like the parent does
+			if (col._prepareModel) subset._prepareModel = col._prepareModel.bind(col);
+
+			// listen to main collection for changes
+			this.listenTo(col, {
+				add: function(m, c, opts) {
+					if (_.contains(this.value, m.id)) subset.add(m);
+				},
+				remove: function(m, c, opts) {
+					subset.remove(m);
+				}
+			});
+
+			// generic function for updating the value from subset
+			updateValue = _.bind(function(add, remove, opts) {
+				remove.forEach(this.removeReference, this);
+				add.forEach(this.addReference, this);
+
+				if (opts == null || opts.flush_link !== false) {
+					this.mergeValueWithSubset(remove);
+					this.flushChanges();
+				}
+			}, this);
+
+			// listen to subset for changes
+			this.listenTo(subset, {
+				add:    function(m, c, opts) { updateValue([ m ], [], opts); },
+				remove: function(m, c, opts) { updateValue([], [ m ], opts); },
+				reset:  function(c, opts)    { updateValue(c.toArray(), opts.previousModels, opts); }
+			});
+
+			return subset;
+		},
+
 		// check if a subset is valid
-		updateValidityFromSubset: function() {
+		checkSubsetValidity: function() {
 			if (this.subset == null) return this;
 
 			// value is only valid if all the items are present
@@ -983,31 +996,29 @@ exports.transformPouchError = function(e) {
 		},
 
 		// sets the real value of the symlink according to models in the subset
-		updateValueFromSubset: function(remove) {
+		mergeValueWithSubset: function(remove) {
 			if (this.subset == null) return this;
 
 			// get the list of ids from the subset
 			var ids = this.subset.map(function(m) { return m.id; });
 
-			// if the symlink isn't valid yet, make sure to get all the ids
-			if (this.firstRun || !this.valid) {
-				// this union ensures that a race condition is not created
-				// if a model hasn't arrived yet, but changes are already
-				// being made on the subset; we want to ensure that models
-				// are not lost from our original list.
-				ids = _.union(this.value, ids);
+			// this union ensures that a race condition is not created
+			// if a model hasn't arrived yet, but changes are already
+			// being made on the subset; we want to ensure that models
+			// are not lost from our original list.
+			ids = _.union(this.value, ids);
 
-				// if a model was removed from the subset it was
-				// undoubtedly added back in the union, so this just
-				// guarantees it's removed.
-				if (remove != null) ids = _.without(ids, remove);
-			}
+			// if a model was removed from the subset it was
+			// undoubtedly added back in the union, so this just
+			// guarantees it's removed.
+			remove = _.isArray(remove) ? remove : remove != null ? [ remove ] : [];
+			ids = _.without.apply(_, [ ids ].concat(remove));
 
 			// update the real value to the list of ids
 			this.setValue(ids);
 
-			// value is only valid if all the items are present
-			this.updateValidityFromSubset();
+			// check if the subset is valid
+			this.checkSubsetValidity();
 
 			return this;
 		},
@@ -1035,11 +1046,18 @@ exports.transformPouchError = function(e) {
 				l[0].off(l[1], l[2], l[3]);
 			});
 
+			// remove reference in model
+			if (this.type === Symlink.MODEL_LINK && this.virtual) {
+				this.removeReference(this.virtual);
+			}
+
 			return this;
 		},
 
 		// sets symlink back to a null state
 		reset: function(write) {
+			var subset;
+
 			// clean up listeners
 			this.clean();
 
@@ -1048,15 +1066,37 @@ exports.transformPouchError = function(e) {
 
 			// kill the subset
 			if (this.subset != null) {
-				this.stopListening(this.subset);
+				subset = this.subset;
 				delete this.subset;
+				this.stopListening(subset);
+				subset.each(this.removeReference, this);
+				subset.reset();
 			}
 
 			// set null on all values
-			this.firstRun = true;
+			this.isNew = true;
 			this.setValue(null);
 			this.set(true, null, write);
 
+			return this;
+		},
+
+		addReference: function(model) {
+			var ref = model._refSymlinks;
+			if (ref == null) ref = model._refSymlinks = [];
+			if (!_.contains(ref, this)) {
+				ref.push(this);
+				model.trigger("reference:add", this);
+			}
+			return this;
+		},
+
+		removeReference: function(model) {
+			var ref = model._refSymlinks;
+			if (ref && _.contains(ref, this)) {
+				model._refSymlinks = _.without(ref, this);
+				model.trigger("reference:remove", this);
+			}
 			return this;
 		}
 
@@ -1076,19 +1116,21 @@ exports.transformPouchError = function(e) {
 				// create the symlink instance
 				var symlink = this._symlinks[attr] = new Symlink(this, attr, col, options);
 
+				//activate the symlink
+				symlink.activate();
+
 				// announce the symlink
 				this.trigger("symlink", symlink);
 
-				// return model for chaining
-				return this;
+				// returns the symlink object
+				return symlink;
 			};
 		},
 
 		// returns the symlink by attribute
 		getSymlink: function(_super) {
 			return function getSymlink(attr) {
-				if (this._symlinks == null) this._symlinks = {};
-				return this._symlinks[attr];
+				return this._symlinks != null ? this._symlinks[attr] : null;
 			};
 		},
 
@@ -1109,8 +1151,8 @@ exports.transformPouchError = function(e) {
 				var symlink = this.getSymlink(attr);
 				if (symlink == null) return this;
 
-				// detach the symlink
-				symlink.detach();
+				// deactivate the symlink
+				symlink.deactivate();
 				
 				// delete the symlink
 				delete this._symlinks[attr];
@@ -1194,8 +1236,8 @@ exports.transformPouchError = function(e) {
 
 	// export the Symlink class
 	return Symlink;
-}));
-},{"backbone":6,"underscore":117}],6:[function(require,module,exports){
+});
+},{"backbone":6,"underscore":83}],6:[function(require,module,exports){
 //     Backbone.js 1.1.2
 
 //     (c) 2010-2014 Jeremy Ashkenas, DocumentCloud and Investigative Reporters & Editors
@@ -2805,16 +2847,43 @@ exports.transformPouchError = function(e) {
 
 }));
 
-},{"underscore":117}],7:[function(require,module,exports){
+},{"underscore":83}],7:[function(require,module,exports){
+(function (process,global){
+/* @preserve
+ * The MIT License (MIT)
+ * 
+ * Copyright (c) 2014 Petka Antonov
+ * 
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:</p>
+ * 
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ * 
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ * 
+ */
+/**
+ * bluebird build version 2.9.3
+ * Features enabled: core, race, call_get, generators, map, nodeify, promisify, props, reduce, settle, some, progress, cancel, using, filter, any, each, timers
+*/
+!function(e){if("object"==typeof exports&&"undefined"!=typeof module)module.exports=e();else if("function"==typeof define&&define.amd)define([],e);else{var f;"undefined"!=typeof window?f=window:"undefined"!=typeof global?f=global:"undefined"!=typeof self&&(f=self),f.Promise=e()}}(function(){var define,module,exports;return (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof _dereq_=="function"&&_dereq_;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof _dereq_=="function"&&_dereq_;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(_dereq_,module,exports){
 "use strict";
 module.exports = function(Promise) {
 var SomePromiseArray = Promise._SomePromiseArray;
 function any(promises) {
     var ret = new SomePromiseArray(promises);
     var promise = ret.promise();
-    if (promise.isRejected()) {
-        return promise;
-    }
     ret.setHowMany(1);
     ret.setUnwrap();
     ret.init();
@@ -2831,13 +2900,12 @@ Promise.prototype.any = function () {
 
 };
 
-},{}],8:[function(require,module,exports){
-(function (process){
+},{}],2:[function(_dereq_,module,exports){
 "use strict";
 var firstLineError;
 try {throw new Error(); } catch (e) {firstLineError = e;}
-var schedule = require("./schedule.js");
-var Queue = require("./queue.js");
+var schedule = _dereq_("./schedule.js");
+var Queue = _dereq_("./queue.js");
 var _process = typeof process !== "undefined" ? process : undefined;
 
 function Async() {
@@ -2940,8 +3008,80 @@ Async.prototype._reset = function () {
 module.exports = new Async();
 module.exports.firstLineError = firstLineError;
 
-}).call(this,require('_process'))
-},{"./queue.js":31,"./schedule.js":34,"_process":51}],9:[function(require,module,exports){
+},{"./queue.js":28,"./schedule.js":31}],3:[function(_dereq_,module,exports){
+"use strict";
+module.exports = function(Promise, INTERNAL, tryConvertToPromise) {
+function returnThis() { return this.value; }
+function throwThis() { throw this.reason; }
+function awaitBindingThenResolve(value) {
+    return this._then(returnThis, null, null, {value: value}, undefined);
+}
+function awaitBindingThenReject(reason) {
+    return this._then(throwThis, throwThis, null, {reason: reason}, undefined);
+}
+function setBinding(binding) { this._setBoundTo(binding); }
+Promise.prototype.bind = function (thisArg) {
+    var maybePromise = tryConvertToPromise(thisArg);
+    if (maybePromise instanceof Promise) {
+        if (maybePromise.isFulfilled()) {
+            thisArg = maybePromise.value();
+        } else if (maybePromise.isRejected()) {
+            return Promise.reject(maybePromise.reason());
+        } else {
+            var ret = this.then();
+            var parent = ret;
+            ret = ret._then(awaitBindingThenResolve,
+                            awaitBindingThenReject,
+                            null, maybePromise, undefined);
+            maybePromise._then(setBinding, ret._reject, null, ret, null);
+            if (!ret._cancellable()) ret._setPendingCancellationParent(parent);
+            return ret;
+        }
+    }
+    var ret = this.then();
+    ret._setBoundTo(thisArg);
+    return ret;
+};
+
+Promise.bind = function (thisArg, value) {
+    return Promise.resolve(value).bind(thisArg);
+};
+
+Promise.prototype._setPendingCancellationParent = function(parent) {
+    this._settledValue = parent;
+};
+
+Promise.prototype._pendingCancellationParent = function() {
+    if (this.isPending() && this._settledValue !== undefined) {
+        var ret = this._settledValue;
+        ret.cancellable();
+        this._settledValue = undefined;
+        return ret;
+    }
+};
+
+Promise.prototype._setIsMigratingBinding = function () {
+    this._bitField = this._bitField | 8388608;
+};
+
+Promise.prototype._unsetIsMigratingBinding = function () {
+    this._bitField = this._bitField & (~8388608);
+};
+
+Promise.prototype._isMigratingBinding = function () {
+    return (this._bitField & 8388608) === 8388608;
+};
+
+Promise.prototype._setBoundTo = function (obj) {
+    this._boundTo = obj;
+};
+
+Promise.prototype._isBound = function () {
+    return this._boundTo !== undefined;
+};
+};
+
+},{}],4:[function(_dereq_,module,exports){
 "use strict";
 var old;
 if (typeof Promise !== "undefined") old = Promise;
@@ -2950,11 +3090,11 @@ function noConflict() {
     catch (e) {}
     return bluebird;
 }
-var bluebird = require("./promise.js")();
+var bluebird = _dereq_("./promise.js")();
 bluebird.noConflict = noConflict;
 module.exports = bluebird;
 
-},{"./promise.js":26}],10:[function(require,module,exports){
+},{"./promise.js":23}],5:[function(_dereq_,module,exports){
 "use strict";
 var cr = Object.create;
 if (cr) {
@@ -2964,11 +3104,14 @@ if (cr) {
 }
 
 module.exports = function(Promise) {
-var util = require("./util.js");
+var util = _dereq_("./util.js");
 var canEvaluate = util.canEvaluate;
 var isIdentifier = util.isIdentifier;
 
-function makeMethodCaller (methodName) {
+var getMethodCaller;
+var getGetter;
+if (!true) {
+var makeMethodCaller = function (methodName) {
     return new Function("obj", "                                             \n\
         'use strict'                                                         \n\
         var len = this.length;                                               \n\
@@ -2980,16 +3123,16 @@ function makeMethodCaller (methodName) {
             default: return obj.methodName.apply(obj, this);                 \n\
         }                                                                    \n\
         ".replace(/methodName/g, methodName));
-}
+};
 
-function makeGetter (propertyName) {
+var makeGetter = function (propertyName) {
     return new Function("obj", "                                             \n\
         'use strict';                                                        \n\
         return obj.propertyName;                                             \n\
         ".replace("propertyName", propertyName));
-}
+};
 
-function getCompiled(name, compiler, cache) {
+var getCompiled = function(name, compiler, cache) {
     var ret = cache[name];
     if (typeof ret !== "function") {
         if (!isIdentifier(name)) {
@@ -3005,14 +3148,15 @@ function getCompiled(name, compiler, cache) {
         }
     }
     return ret;
-}
+};
 
-function getMethodCaller(name) {
+getMethodCaller = function(name) {
     return getCompiled(name, makeMethodCaller, callerCache);
-}
+};
 
-function getGetter(name) {
+getGetter = function(name) {
     return getCompiled(name, makeGetter, getterCache);
+};
 }
 
 function caller(obj) {
@@ -3020,11 +3164,13 @@ function caller(obj) {
 }
 Promise.prototype.call = function (methodName) {
     var $_len = arguments.length;var args = new Array($_len - 1); for(var $_i = 1; $_i < $_len; ++$_i) {args[$_i - 1] = arguments[$_i];}
-    if (canEvaluate) {
-        var maybeCaller = getMethodCaller(methodName);
-        if (maybeCaller !== null) {
-            return this._then(
-                maybeCaller, undefined, undefined, args, undefined);
+    if (!true) {
+        if (canEvaluate) {
+            var maybeCaller = getMethodCaller(methodName);
+            if (maybeCaller !== null) {
+                return this._then(
+                    maybeCaller, undefined, undefined, args, undefined);
+            }
         }
     }
     args.push(methodName);
@@ -3056,11 +3202,11 @@ Promise.prototype.get = function (propertyName) {
 };
 };
 
-},{"./util.js":41}],11:[function(require,module,exports){
+},{"./util.js":38}],6:[function(_dereq_,module,exports){
 "use strict";
-module.exports = function(Promise, INTERNAL) {
-var errors = require("./errors.js");
-var async = require("./async.js");
+module.exports = function(Promise) {
+var errors = _dereq_("./errors.js");
+var async = _dereq_("./async.js");
 var CancellationError = errors.CancellationError;
 
 Promise.prototype._cancel = function (reason) {
@@ -3085,14 +3231,12 @@ Promise.prototype.cancel = function (reason) {
 Promise.prototype.cancellable = function () {
     if (this._cancellable()) return this;
     this._setCancellable();
-    this._cancellationParent = undefined;
+    this._cancellationParent = this._pendingCancellationParent();
     return this;
 };
 
 Promise.prototype.uncancellable = function () {
-    var ret = new Promise(INTERNAL);
-    ret._propagateFrom(this, 4);
-    ret._follow(this);
+    var ret = this.then();
     ret._unsetCancellable();
     return ret;
 };
@@ -3107,15 +3251,16 @@ Promise.prototype.fork = function (didFulfill, didReject, didProgress) {
 };
 };
 
-},{"./async.js":8,"./errors.js":16}],12:[function(require,module,exports){
-(function (process){
+},{"./async.js":2,"./errors.js":13}],7:[function(_dereq_,module,exports){
 "use strict";
 module.exports = function() {
-var async = require("./async.js");
-var inherits = require("./util.js").inherits;
-var bluebirdFramePattern = /[\\\/]bluebird[\\\/]js[\\\/](main|debug|zalgo)/;
+var async = _dereq_("./async.js");
+var inherits = _dereq_("./util.js").inherits;
+var bluebirdFramePattern =
+    /[\\\/]bluebird[\\\/]js[\\\/](main|debug|zalgo|instrumented)/;
 var stackFramePattern = null;
 var formatStack = null;
+var indentStackFrames = false;
 
 function CapturedTrace(parent) {
     this._parent = parent;
@@ -3184,18 +3329,19 @@ CapturedTrace.prototype.hasParent = function() {
 CapturedTrace.prototype.attachExtraTrace = function(error) {
     if (error.__stackCleaned__) return;
     this.uncycle();
-    var header = CapturedTrace.cleanHeaderStack(error, false);
-    var stacks = [header.slice(1)];
-    var trace = this;
+    var parsed = CapturedTrace.parseStackAndMessage(error);
+    var message = parsed.message;
+    var stacks = [parsed.stack];
 
+    var trace = this;
     while (trace !== undefined) {
-        stacks.push(cleanStack(trace.stack.split("\n"), 0));
+        stacks.push(cleanStack(trace.stack.split("\n")));
         trace = trace._parent;
     }
     removeCommonRoots(stacks);
     removeDuplicateOrEmptyJumps(stacks);
-    var message = header[0].split("\u0002\u0000\u0001").join("\n");
     error.stack = reconstructStack(message, stacks);
+    error.__stackCleaned__ = true;
 };
 
 function reconstructStack(message, stacks) {
@@ -3203,7 +3349,9 @@ function reconstructStack(message, stacks) {
         stacks[i].push("From previous event:");
         stacks[i] = stacks[i].join("\n");
     }
-    stacks[i] = stacks[i].join("\n");
+    if (i < stacks.length) {
+        stacks[i] = stacks[i].join("\n");
+    }
     return message + "\n" + stacks.join("\n");
 }
 
@@ -3245,55 +3393,46 @@ function removeCommonRoots(stacks) {
     }
 }
 
-function protectErrorMessageNewlines (stack) {
+function cleanStack(stack) {
+    var ret = [];
     for (var i = 0; i < stack.length; ++i) {
-        var line = stack[i];
-        if ("    (No stack trace)" === line || stackFramePattern.test(line)) {
-            break;
-        }
-    }
-    if (i <= 1) return 1;
-    var errorMessageLines = [];
-    for (var j = 0; j < i; ++j) {
-        errorMessageLines.push(stack.shift());
-    }
-    stack.unshift(errorMessageLines.join("\u0002\u0000\u0001"));
-    return i;
-}
-
-function unProtectNewlines(stack) {
-    if (stack.length > 0) {
-        stack[0] = stack[0].split("\u0002\u0000\u0001").join("\n");
-    }
-    return stack;
-}
-
-function cleanStack(stack, initialIndex) {
-    var ret = stack.slice(0, initialIndex);
-    for (var i = initialIndex; i < stack.length; ++i) {
         var line = stack[i];
         var isTraceLine = stackFramePattern.test(line) ||
             "    (No stack trace)" === line;
         var isInternalFrame = isTraceLine && shouldIgnore(line);
         if (isTraceLine && !isInternalFrame) {
+            if (indentStackFrames && line.charAt(0) !== " ") {
+                line = "    " + line;
+            }
             ret.push(line);
         }
     }
     return ret;
 }
 
-CapturedTrace.cleanHeaderStack = function(error, shouldUnProtectNewlines) {
-    if (error.__stackCleaned__) return;
-    error.__stackCleaned__ = true;
-    var stack = error.stack;
-    stack = typeof stack === "string"
-        ? stack.split("\n")
-        : [error.toString(), "    (No stack trace)"];
-    var initialIndex = protectErrorMessageNewlines(stack);
-    stack = cleanStack(stack, initialIndex);
-    if (shouldUnProtectNewlines) stack = unProtectNewlines(stack);
-    error.stack = stack.join("\n");
+function stackFramesAsArray(error) {
+    var stack = error.stack.replace(/\s+$/g, "").split("\n");
+    for (var i = 0; i < stack.length; ++i) {
+        var line = stack[i];
+        if ("    (No stack trace)" === line || stackFramePattern.test(line)) {
+            break;
+        }
+    }
+    if (i > 0) {
+        stack = stack.slice(i);
+    }
     return stack;
+}
+
+CapturedTrace.parseStackAndMessage = function(error) {
+    var stack = error.stack;
+    var message = error.toString();
+    stack = typeof stack === "string" && stack.length > 0
+                ? stackFramesAsArray(error) : ["    (No stack trace)"];
+    return {
+        message: message,
+        stack: cleanStack(stack)
+    };
 };
 
 CapturedTrace.formatAndLogError = function(error, title) {
@@ -3347,7 +3486,20 @@ function(name, localHandler, reason, promise) {
         async.throwLater(e);
     }
 
-    if (!globalEventFired && !localEventFired &&
+    var domEventFired = false;
+    if (fireDomEvent) {
+        try {
+            domEventFired = fireDomEvent(name.toLowerCase(), {
+                reason: reason,
+                promise: promise
+            });
+        } catch (e) {
+            domEventFired = true;
+            async.throwLater(e);
+        }
+    }
+
+    if (!globalEventFired && !localEventFired && !domEventFired &&
         name === "unhandledRejection") {
         CapturedTrace.formatAndLogError(reason, "Possibly unhandled ");
     }
@@ -3446,7 +3598,7 @@ var captureStackTrace = (function stackDetection() {
 
         if (error.name !== undefined &&
             error.message !== undefined) {
-            return error.name + ". " + error.message;
+            return error.toString();
         }
         return formatNonError(error);
     };
@@ -3470,37 +3622,12 @@ var captureStackTrace = (function stackDetection() {
     var err = new Error();
 
     if (typeof err.stack === "string" &&
-        typeof "".startsWith === "function" &&
-        (err.stack.startsWith("stackDetection@")) &&
-        stackDetection.name === "stackDetection") {
-
+        err.stack.split("\n")[0].indexOf("stackDetection@") >= 0) {
         stackFramePattern = /@/;
-        var rline = /[@\n]/;
-
-        formatStack = function(stack, error) {
-            if (typeof stack === "string") {
-                return (error.name + ". " + error.message + "\n" + stack);
-            }
-
-            if (error.name !== undefined &&
-                error.message !== undefined) {
-                return error.name + ". " + error.message;
-            }
-            return formatNonError(error);
-        };
-
+        formatStack = v8stackFormatter;
+        indentStackFrames = true;
         return function captureStackTrace(o) {
-            var stack = new Error().stack;
-            var split = stack.split(rline);
-            var len = split.length;
-            var ret = "";
-            for (var i = 0; i < len; i += 2) {
-                ret += split[i];
-                ret += "@";
-                ret += split[i + 1];
-                ret += "\n";
-            }
-            o.stack = ret;
+            o.stack = new Error().stack;
         };
     }
 
@@ -3513,8 +3640,10 @@ var captureStackTrace = (function stackDetection() {
         stackFramePattern = v8stackFramePattern;
         formatStack = v8stackFormatter;
         return function captureStackTrace(o) {
+            Error.stackTraceLimit = Error.stackTraceLimit + 6;
             try { throw new Error(); }
             catch(e) { o.stack = e.stack; }
+            Error.stackTraceLimit = Error.stackTraceLimit - 6;
         };
     }
 
@@ -3525,15 +3654,16 @@ var captureStackTrace = (function stackDetection() {
             typeof error === "function") &&
             error.name !== undefined &&
             error.message !== undefined) {
-            return error.name + ". " + error.message;
+            return error.toString();
         }
         return formatNonError(error);
     };
 
     return null;
 
-})();
+})([]);
 
+var fireDomEvent;
 var fireGlobalEvent = (function() {
     if (typeof process !== "undefined" &&
         typeof process.version === "string" &&
@@ -3546,6 +3676,39 @@ var fireGlobalEvent = (function() {
             }
         };
     } else {
+        var customEventWorks = false;
+        var anyEventWorks = true;
+        try {
+            var ev = new self.CustomEvent("test");
+            customEventWorks = ev instanceof CustomEvent;
+        } catch (e) {}
+        if (!customEventWorks) {
+            try {
+                var event = document.createEvent("CustomEvent");
+                event.initCustomEvent("testingtheevent", false, true, {});
+                self.dispatchEvent(event);
+            } catch (e) {
+                anyEventWorks = false;
+            }
+        }
+        if (anyEventWorks) {
+            fireDomEvent = function(type, detail) {
+                var event;
+                if (customEventWorks) {
+                    event = new self.CustomEvent(type, {
+                        detail: detail,
+                        bubbles: false,
+                        cancelable: true
+                    });
+                } else if (self.dispatchEvent) {
+                    event = document.createEvent("CustomEvent");
+                    event.initCustomEvent(type, false, true, detail);
+                }
+
+                return event ? !self.dispatchEvent(event) : false;
+            };
+        }
+
         var toWindowMethodNameMap = {};
         toWindowMethodNameMap["unhandledRejection"] = ("on" +
             "unhandledRejection").toLowerCase();
@@ -3569,15 +3732,14 @@ var fireGlobalEvent = (function() {
 return CapturedTrace;
 };
 
-}).call(this,require('_process'))
-},{"./async.js":8,"./util.js":41,"_process":51}],13:[function(require,module,exports){
+},{"./async.js":2,"./util.js":38}],8:[function(_dereq_,module,exports){
 "use strict";
 module.exports = function(NEXT_FILTER) {
-var util = require("./util.js");
-var errors = require("./errors.js");
+var util = _dereq_("./util.js");
+var errors = _dereq_("./errors.js");
 var tryCatch = util.tryCatch;
 var errorObj = util.errorObj;
-var keys = require("./es5.js").keys;
+var keys = _dereq_("./es5.js").keys;
 var TypeError = errors.TypeError;
 
 function CatchFilter(instances, callback, promise) {
@@ -3619,10 +3781,6 @@ CatchFilter.prototype.doFilter = function (e) {
         } else if (typeof item === "function" && !itemIsErrorType) {
             var shouldHandle = safePredicate(item, e);
             if (shouldHandle === errorObj) {
-                var trace = util.canAttachTrace(errorObj.e)
-                    ? errorObj.e
-                    : new Error(util.toString(errorObj.e));
-                this._promise._attachExtraTrace(trace);
                 e = errorObj.e;
                 break;
             } else if (shouldHandle) {
@@ -3642,9 +3800,181 @@ CatchFilter.prototype.doFilter = function (e) {
 return CatchFilter;
 };
 
-},{"./errors.js":16,"./es5.js":18,"./util.js":41}],14:[function(require,module,exports){
+},{"./errors.js":13,"./es5.js":14,"./util.js":38}],9:[function(_dereq_,module,exports){
 "use strict";
-var util = require("./util.js");
+module.exports = function(Promise, CapturedTrace, isDebugging) {
+var contextStack = [];
+function Context() {
+    this._trace = new CapturedTrace(peekContext());
+}
+Context.prototype._pushContext = function () {
+    if (!isDebugging()) return;
+    if (this._trace !== undefined) {
+        contextStack.push(this._trace);
+    }
+};
+
+Context.prototype._popContext = function () {
+    if (!isDebugging()) return;
+    if (this._trace !== undefined) {
+        contextStack.pop();
+    }
+};
+
+function createContext() {
+    if (isDebugging()) return new Context();
+}
+
+function peekContext() {
+    var lastIndex = contextStack.length - 1;
+    if (lastIndex >= 0) {
+        return contextStack[lastIndex];
+    }
+    return undefined;
+}
+
+Promise.prototype._peekContext = peekContext;
+Promise.prototype._pushContext = Context.prototype._pushContext;
+Promise.prototype._popContext = Context.prototype._popContext;
+
+return createContext;
+};
+
+},{}],10:[function(_dereq_,module,exports){
+"use strict";
+module.exports = function(Promise, CapturedTrace) {
+var async = _dereq_("./async.js");
+var util = _dereq_("./util.js");
+var canAttachTrace = util.canAttachTrace;
+var unhandledRejectionHandled;
+var possiblyUnhandledRejection;
+var debugging = false || !!(
+    typeof process !== "undefined" &&
+    typeof process.execPath === "string" &&
+    typeof process.env === "object" &&
+    (process.env["BLUEBIRD_DEBUG"] ||
+        process.env["NODE_ENV"] === "development")
+);
+
+Promise.prototype._ensurePossibleRejectionHandled = function () {
+    this._setRejectionIsUnhandled();
+    async.invokeLater(this._notifyUnhandledRejection, this, undefined);
+};
+
+Promise.prototype._notifyUnhandledRejectionIsHandled = function () {
+    CapturedTrace.fireRejectionEvent("rejectionHandled",
+                                  unhandledRejectionHandled, undefined, this);
+};
+
+Promise.prototype._notifyUnhandledRejection = function () {
+    if (this._isRejectionUnhandled()) {
+        var reason = this._getCarriedStackTrace() || this._settledValue;
+        this._setUnhandledRejectionIsNotified();
+        CapturedTrace.fireRejectionEvent("unhandledRejection",
+                                      possiblyUnhandledRejection, reason, this);
+    }
+};
+
+Promise.prototype._setUnhandledRejectionIsNotified = function () {
+    this._bitField = this._bitField | 524288;
+};
+
+Promise.prototype._unsetUnhandledRejectionIsNotified = function () {
+    this._bitField = this._bitField & (~524288);
+};
+
+Promise.prototype._isUnhandledRejectionNotified = function () {
+    return (this._bitField & 524288) > 0;
+};
+
+Promise.prototype._setRejectionIsUnhandled = function () {
+    this._bitField = this._bitField | 2097152;
+};
+
+Promise.prototype._unsetRejectionIsUnhandled = function () {
+    this._bitField = this._bitField & (~2097152);
+    if (this._isUnhandledRejectionNotified()) {
+        this._unsetUnhandledRejectionIsNotified();
+        this._notifyUnhandledRejectionIsHandled();
+    }
+};
+
+Promise.prototype._isRejectionUnhandled = function () {
+    return (this._bitField & 2097152) > 0;
+};
+
+Promise.prototype._setCarriedStackTrace = function (capturedTrace) {
+    this._bitField = this._bitField | 1048576;
+    this._fulfillmentHandler0 = capturedTrace;
+};
+
+Promise.prototype._isCarryingStackTrace = function () {
+    return (this._bitField & 1048576) > 0;
+};
+
+Promise.prototype._getCarriedStackTrace = function () {
+    return this._isCarryingStackTrace()
+        ? this._fulfillmentHandler0
+        : undefined;
+};
+
+Promise.prototype._captureStackTrace = function () {
+    if (debugging) {
+        this._trace = new CapturedTrace(this._peekContext());
+    }
+    return this;
+};
+
+Promise.prototype._attachExtraTrace = function (error, ignoreSelf) {
+    if (debugging && canAttachTrace(error)) {
+        var trace = this._trace;
+        if (trace !== undefined) {
+            if (ignoreSelf) trace = trace._parent;
+        }
+        if (trace !== undefined) {
+            trace.attachExtraTrace(error);
+        } else if (!error.__stackCleaned__) {
+            var parsed = CapturedTrace.parseStackAndMessage(error);
+            error.stack = parsed.stack.join("\n");
+            error.__stackCleaned__ = true;
+        }
+    }
+};
+
+Promise.onPossiblyUnhandledRejection = function (fn) {
+    possiblyUnhandledRejection = typeof fn === "function" ? fn : undefined;
+};
+
+Promise.onUnhandledRejectionHandled = function (fn) {
+    unhandledRejectionHandled = typeof fn === "function" ? fn : undefined;
+};
+
+Promise.longStackTraces = function () {
+    if (async.haveItemsQueued() &&
+        debugging === false
+   ) {
+        throw new Error("cannot enable long stack traces after promises have been created\u000a\u000a    See http://goo.gl/DT1qyG\u000a");
+    }
+    debugging = CapturedTrace.isSupported();
+};
+
+Promise.hasLongStackTraces = function () {
+    return debugging && CapturedTrace.isSupported();
+};
+
+if (!CapturedTrace.isSupported()) {
+    Promise.longStackTraces = function(){};
+    debugging = false;
+}
+
+return function() {
+    return debugging;
+};
+};
+
+},{"./async.js":2,"./util.js":38}],11:[function(_dereq_,module,exports){
+"use strict";
+var util = _dereq_("./util.js");
 var isPrimitive = util.isPrimitive;
 var wrapsPrimitiveReceiver = util.wrapsPrimitiveReceiver;
 
@@ -3698,7 +4028,7 @@ Promise.prototype.thenThrow = function (reason) {
 };
 };
 
-},{"./util.js":41}],15:[function(require,module,exports){
+},{"./util.js":38}],12:[function(_dereq_,module,exports){
 "use strict";
 module.exports = function(Promise, INTERNAL) {
 var PromiseReduce = Promise.reduce;
@@ -3712,10 +4042,10 @@ Promise.each = function (promises, fn) {
 };
 };
 
-},{}],16:[function(require,module,exports){
+},{}],13:[function(_dereq_,module,exports){
 "use strict";
-var Objectfreeze = require("./es5.js").freeze;
-var util = require("./util.js");
+var Objectfreeze = _dereq_("./es5.js").freeze;
+var util = _dereq_("./util.js");
 var inherits = util.inherits;
 var notEnumerableProp = util.notEnumerableProp;
 
@@ -3776,6 +4106,8 @@ AggregateError.prototype.toString = function() {
 };
 
 function OperationalError(message) {
+    if (!(this instanceof OperationalError))
+        return new OperationalError(message);
     notEnumerableProp(this, "name", "OperationalError");
     notEnumerableProp(this, "message", message);
     this.cause = message;
@@ -3813,25 +4145,7 @@ module.exports = {
     AggregateError: errorTypes.AggregateError
 };
 
-},{"./es5.js":18,"./util.js":41}],17:[function(require,module,exports){
-"use strict";
-module.exports = function(Promise) {
-var TypeError = require("./errors.js").TypeError;
-
-function apiRejection(msg) {
-    var error = new TypeError(msg);
-    var ret = Promise.reject(error);
-    var parent = ret._peekContext();
-    if (parent != null) {
-        parent.attachExtraTrace(error);
-    }
-    return ret;
-}
-
-return apiRejection;
-};
-
-},{"./errors.js":16}],18:[function(require,module,exports){
+},{"./es5.js":14,"./util.js":38}],14:[function(_dereq_,module,exports){
 var isES5 = (function(){
     "use strict";
     return this === undefined;
@@ -3905,7 +4219,7 @@ if (isES5) {
     };
 }
 
-},{}],19:[function(require,module,exports){
+},{}],15:[function(_dereq_,module,exports){
 "use strict";
 module.exports = function(Promise, INTERNAL) {
 var PromiseMap = Promise.map;
@@ -3919,10 +4233,10 @@ Promise.filter = function (promises, fn, options) {
 };
 };
 
-},{}],20:[function(require,module,exports){
+},{}],16:[function(_dereq_,module,exports){
 "use strict";
 module.exports = function(Promise, NEXT_FILTER, tryConvertToPromise) {
-var util = require("./util.js");
+var util = _dereq_("./util.js");
 var wrapsPrimitiveReceiver = util.wrapsPrimitiveReceiver;
 var isPrimitive = util.isPrimitive;
 var thrower = util.thrower;
@@ -4020,33 +4334,32 @@ Promise.prototype.tap = function (handler) {
 };
 };
 
-},{"./util.js":41}],21:[function(require,module,exports){
+},{"./util.js":38}],17:[function(_dereq_,module,exports){
 "use strict";
 module.exports = function(Promise,
                           apiRejection,
                           INTERNAL,
                           tryConvertToPromise) {
-var errors = require("./errors.js");
+var errors = _dereq_("./errors.js");
 var TypeError = errors.TypeError;
-var deprecated = require("./util.js").deprecated;
-var util = require("./util.js");
+var util = _dereq_("./util.js");
 var errorObj = util.errorObj;
 var tryCatch = util.tryCatch;
 var yieldHandlers = [];
 
 function promiseFromYieldHandler(value, yieldHandlers, traceParent) {
-    var _errorObj = errorObj;
-    var _Promise = Promise;
-    var len = yieldHandlers.length;
-    for (var i = 0; i < len; ++i) {
+    for (var i = 0; i < yieldHandlers.length; ++i) {
         traceParent._pushContext();
         var result = tryCatch(yieldHandlers[i])(value);
         traceParent._popContext();
-        if (result === _errorObj) {
-            return _Promise.reject(_errorObj.e);
+        if (result === errorObj) {
+            traceParent._pushContext();
+            var ret = Promise.reject(errorObj.e);
+            traceParent._popContext();
+            return ret;
         }
         var maybePromise = tryConvertToPromise(result, traceParent);
-        if (maybePromise instanceof _Promise) return maybePromise;
+        if (maybePromise instanceof Promise) return maybePromise;
     }
     return null;
 }
@@ -4076,20 +4389,12 @@ PromiseSpawn.prototype._run = function () {
 
 PromiseSpawn.prototype._continue = function (result) {
     if (result === errorObj) {
-        this._generator = undefined;
-        var trace = util.canAttachTrace(result.e)
-            ? result.e : new Error(util.toString(result.e));
-        this._promise._attachExtraTrace(trace);
-        this._promise._reject(result.e, trace);
-        return;
+        return this._promise._rejectCallback(result.e, false, true);
     }
 
     var value = result.value;
     if (result.done === true) {
-        this._generator = undefined;
-        if (!this._promise._tryFollow(value)) {
-            this._promise._fulfill(value);
-        }
+        this._promise._resolveCallback(value);
     } else {
         var maybePromise = tryConvertToPromise(value, this._promise);
         if (!(maybePromise instanceof Promise)) {
@@ -4119,8 +4424,7 @@ PromiseSpawn.prototype._continue = function (result) {
 };
 
 PromiseSpawn.prototype._throw = function (reason) {
-    if (util.canAttachTrace(reason))
-        this._promise._attachExtraTrace(reason);
+    this._promise._attachExtraTrace(reason);
     this._promise._pushContext();
     var result = tryCatch(this._generator["throw"])
         .call(this._generator, reason);
@@ -4158,7 +4462,6 @@ Promise.coroutine.addYieldHandler = function(fn) {
 };
 
 Promise.spawn = function (generatorFunction) {
-    deprecated("Promise.spawn is deprecated. Use Promise.coroutine instead.");
     if (typeof generatorFunction !== "function") {
         return apiRejection("generatorFunction must be a function\u000a\u000a    See http://goo.gl/6Vqhm0\u000a");
     }
@@ -4169,15 +4472,17 @@ Promise.spawn = function (generatorFunction) {
 };
 };
 
-},{"./errors.js":16,"./util.js":41}],22:[function(require,module,exports){
+},{"./errors.js":13,"./util.js":38}],18:[function(_dereq_,module,exports){
 "use strict";
 module.exports =
 function(Promise, PromiseArray, tryConvertToPromise, INTERNAL) {
-var util = require("./util.js");
+var util = _dereq_("./util.js");
 var canEvaluate = util.canEvaluate;
 var tryCatch = util.tryCatch;
 var errorObj = util.errorObj;
+var reject;
 
+if (!true) {
 if (canEvaluate) {
     var thenCallback = function(i) {
         return new Function("value", "holder", "                             \n\
@@ -4222,17 +4527,18 @@ if (canEvaluate) {
             promise._popContext();
             if (ret === errorObj) {
                 promise._rejectCallback(ret.e, false, true);
-            } else if (!promise._tryFollow(ret)) {
-                promise._fulfillUnchecked(ret);
+            } else {
+                promise._resolveCallback(ret);
             }
         } else {
             this.now = now;
         }
     };
-}
 
-function reject(reason) {
-    this._reject(reason);
+    var reject = function (reason) {
+        this._reject(reason);
+    };
+}
 }
 
 Promise.join = function () {
@@ -4240,46 +4546,49 @@ Promise.join = function () {
     var fn;
     if (last > 0 && typeof arguments[last] === "function") {
         fn = arguments[last];
-        if (last < 6 && canEvaluate) {
-            var ret = new Promise(INTERNAL);
-            ret._captureStackTrace();
-            var holder = new Holder(last, fn);
-            var callbacks = thenCallbacks;
-            for (var i = 0; i < last; ++i) {
-                var maybePromise = tryConvertToPromise(arguments[i], ret);
-                if (maybePromise instanceof Promise) {
-                    maybePromise = maybePromise._target();
-                    if (maybePromise._isPending()) {
-                        maybePromise._then(callbacks[i], reject,
-                                           undefined, ret, holder);
-                    } else if (maybePromise._isFulfilled()) {
-                        callbacks[i].call(ret,
-                                          maybePromise._value(), holder);
+        if (!true) {
+            if (last < 6 && canEvaluate) {
+                var ret = new Promise(INTERNAL);
+                ret._captureStackTrace();
+                var holder = new Holder(last, fn);
+                var callbacks = thenCallbacks;
+                for (var i = 0; i < last; ++i) {
+                    var maybePromise = tryConvertToPromise(arguments[i], ret);
+                    if (maybePromise instanceof Promise) {
+                        maybePromise = maybePromise._target();
+                        if (maybePromise._isPending()) {
+                            maybePromise._then(callbacks[i], reject,
+                                               undefined, ret, holder);
+                        } else if (maybePromise._isFulfilled()) {
+                            callbacks[i].call(ret,
+                                              maybePromise._value(), holder);
+                        } else {
+                            ret._reject(maybePromise._reason());
+                        }
                     } else {
-                        ret._reject(maybePromise._reason());
+                        callbacks[i].call(ret, maybePromise, holder);
                     }
-                } else {
-                    callbacks[i].call(ret, maybePromise, holder);
                 }
+                return ret;
             }
-            return ret;
         }
     }
     var $_len = arguments.length;var args = new Array($_len); for(var $_i = 0; $_i < $_len; ++$_i) {args[$_i] = arguments[$_i];}
+    if (fn) args.pop();
     var ret = new PromiseArray(args).promise();
     return fn !== undefined ? ret.spread(fn) : ret;
 };
 
 };
 
-},{"./util.js":41}],23:[function(require,module,exports){
+},{"./util.js":38}],19:[function(_dereq_,module,exports){
 "use strict";
 module.exports = function(Promise,
                           PromiseArray,
                           apiRejection,
                           tryConvertToPromise,
                           INTERNAL) {
-var util = require("./util.js");
+var util = _dereq_("./util.js");
 var tryCatch = util.tryCatch;
 var errorObj = util.errorObj;
 var PENDING = {};
@@ -4404,11 +4713,57 @@ Promise.map = function (promises, fn, options, _filter) {
 
 };
 
-},{"./util.js":41}],24:[function(require,module,exports){
+},{"./util.js":38}],20:[function(_dereq_,module,exports){
+"use strict";
+module.exports =
+function(Promise, INTERNAL, tryConvertToPromise, apiRejection) {
+var util = _dereq_("./util.js");
+var tryCatch = util.tryCatch;
+
+Promise.method = function (fn) {
+    if (typeof fn !== "function") {
+        throw new Promise.TypeError("fn must be a function\u000a\u000a    See http://goo.gl/916lJJ\u000a");
+    }
+    return function () {
+        var ret = new Promise(INTERNAL);
+        ret._captureStackTrace();
+        ret._pushContext();
+        var value = tryCatch(fn).apply(this, arguments);
+        ret._popContext();
+        ret._resolveFromSyncValue(value);
+        return ret;
+    };
+};
+
+Promise.attempt = Promise["try"] = function (fn, args, ctx) {
+    if (typeof fn !== "function") {
+        return apiRejection("fn must be a function\u000a\u000a    See http://goo.gl/916lJJ\u000a");
+    }
+    var ret = new Promise(INTERNAL);
+    ret._captureStackTrace();
+    ret._pushContext();
+    var value = util.isArray(args)
+        ? tryCatch(fn).apply(ctx, args)
+        : tryCatch(fn).call(ctx, args);
+    ret._popContext();
+    ret._resolveFromSyncValue(value);
+    return ret;
+};
+
+Promise.prototype._resolveFromSyncValue = function (value) {
+    if (value === util.errorObj) {
+        this._rejectCallback(value.e, false, true);
+    } else {
+        this._resolveCallback(value, true);
+    }
+};
+};
+
+},{"./util.js":38}],21:[function(_dereq_,module,exports){
 "use strict";
 module.exports = function(Promise) {
-var util = require("./util.js");
-var async = require("./async.js");
+var util = _dereq_("./util.js");
+var async = _dereq_("./async.js");
 var tryCatch = util.tryCatch;
 var errorObj = util.errorObj;
 
@@ -4463,11 +4818,11 @@ Promise.prototype.nodeify = function (nodeback, options) {
 };
 };
 
-},{"./async.js":8,"./util.js":41}],25:[function(require,module,exports){
+},{"./async.js":2,"./util.js":38}],22:[function(_dereq_,module,exports){
 "use strict";
 module.exports = function(Promise, PromiseArray) {
-var util = require("./util.js");
-var async = require("./async.js");
+var util = _dereq_("./util.js");
+var async = _dereq_("./async.js");
 var tryCatch = util.tryCatch;
 var errorObj = util.errorObj;
 
@@ -4541,8 +4896,7 @@ Promise.prototype._progressUnchecked = function (progressValue) {
 };
 };
 
-},{"./async.js":8,"./util.js":41}],26:[function(require,module,exports){
-(function (process){
+},{"./async.js":2,"./util.js":38}],23:[function(_dereq_,module,exports){
 "use strict";
 module.exports = function() {
 var makeSelfResolutionError = function () {
@@ -4551,41 +4905,37 @@ var makeSelfResolutionError = function () {
 var reflect = function() {
     return new Promise.PromiseInspection(this._target());
 };
-var util = require("./util.js");
-var async = require("./async.js");
-var errors = require("./errors.js");
+var apiRejection = function(msg) {
+    return Promise.reject(new TypeError(msg));
+};
+var util = _dereq_("./util.js");
+var async = _dereq_("./async.js");
+var errors = _dereq_("./errors.js");
+var TypeError = Promise.TypeError = errors.TypeError;
+Promise.RangeError = errors.RangeError;
+Promise.CancellationError = errors.CancellationError;
+Promise.TimeoutError = errors.TimeoutError;
+Promise.OperationalError = errors.OperationalError;
+Promise.RejectionError = errors.OperationalError;
+Promise.AggregateError = errors.AggregateError;
 var INTERNAL = function(){};
 var APPLY = {};
 var NEXT_FILTER = {e: null};
-var apiRejection = require("./errors_api_rejection")(Promise);
-var tryConvertToPromise = require("./thenables.js")(Promise, INTERNAL);
+var tryConvertToPromise = _dereq_("./thenables.js")(Promise, INTERNAL);
 var PromiseArray =
-    require("./promise_array.js")(Promise, INTERNAL,
+    _dereq_("./promise_array.js")(Promise, INTERNAL,
                                     tryConvertToPromise, apiRejection);
-var CapturedTrace = require("./captured_trace.js")();
-var CatchFilter = require("./catch_filter.js")(NEXT_FILTER);
-var PromiseResolver = require("./promise_resolver.js");
-var isArray = util.isArray;
+var CapturedTrace = _dereq_("./captured_trace.js")();
+var isDebugging = _dereq_("./debuggability.js")(Promise, CapturedTrace);
+ /*jshint unused:false*/
+var createContext =
+    _dereq_("./context.js")(Promise, CapturedTrace, isDebugging);
+var CatchFilter = _dereq_("./catch_filter.js")(NEXT_FILTER);
+var PromiseResolver = _dereq_("./promise_resolver.js");
+var nodebackForPromise = PromiseResolver._nodebackForPromise;
 var errorObj = util.errorObj;
 var tryCatch = util.tryCatch;
-var RangeError = errors.RangeError;
-var TypeError = errors.TypeError;
-var CancellationError = errors.CancellationError;
-var TimeoutError = errors.TimeoutError;
-var OperationalError = errors.OperationalError;
-var originatesFromRejection = util.originatesFromRejection;
-var markAsOriginatingFromRejection = util.markAsOriginatingFromRejection;
-var canAttachTrace = util.canAttachTrace;
-var unhandledRejectionHandled;
-var possiblyUnhandledRejection;
 
-var debugging = false || !!(
-    typeof process !== "undefined" &&
-    typeof process.execPath === "string" &&
-    typeof process.env === "object" &&
-    (process.env["BLUEBIRD_DEBUG"] ||
-        process.env["NODE_ENV"] === "development")
-);
 function Promise(resolver) {
     if (typeof resolver !== "function") {
         throw new TypeError("the promise constructor requires a resolver function\u000a\u000a    See http://goo.gl/EC22Yn\u000a");
@@ -4604,27 +4954,6 @@ function Promise(resolver) {
     if (resolver !== INTERNAL) this._resolveFromResolver(resolver);
 }
 
-Promise.prototype.bind = function (thisArg) {
-    var maybePromise = tryConvertToPromise(thisArg);
-    var ret = new Promise(INTERNAL);
-    ret._propagateFrom(this, 1);
-    var target = this._target();
-    if (maybePromise instanceof Promise) {
-        target._then(INTERNAL, ret._reject, ret._progress, ret, null);
-        maybePromise._then(function(thisArg) {
-            if (ret._isPending()) {
-                ret._setBoundTo(thisArg);
-                ret._follow(target);
-            }
-        }, ret._reject, ret._progress, ret, null);
-    } else {
-        ret._setBoundTo(thisArg);
-        ret._follow(target);
-    }
-
-    return ret;
-};
-
 Promise.prototype.toString = function () {
     return "[object Promise]";
 };
@@ -4639,9 +4968,8 @@ Promise.prototype.caught = Promise.prototype["catch"] = function (fn) {
             if (typeof item === "function") {
                 catchInstances[j++] = item;
             } else {
-                var error = new TypeError("Catch filter must inherit from Error or be a simple predicate function\u000a\u000a    See http://goo.gl/o84o68\u000a");
-                this._attachExtraTrace(error);
-                return Promise.reject(error);
+                return Promise.reject(
+                    new TypeError("Catch filter must inherit from Error or be a simple predicate function\u000a\u000a    See http://goo.gl/o84o68\u000a"));
             }
         }
         catchInstances.length = j;
@@ -4706,11 +5034,20 @@ Promise.prototype.all = function () {
 };
 
 Promise.prototype.error = function (fn) {
-    return this.caught(originatesFromRejection, fn);
+    return this.caught(util.originatesFromRejection, fn);
 };
 
 Promise.is = function (val) {
     return val instanceof Promise;
+};
+
+Promise.fromNode = function(fn) {
+    var ret = new Promise(INTERNAL);
+    var result = tryCatch(fn)(nodebackForPromise(ret));
+    if (result === errorObj) {
+        ret._rejectCallback(result.e, true, true);
+    }
+    return ret;
 };
 
 Promise.all = function (promises) {
@@ -4719,55 +5056,9 @@ Promise.all = function (promises) {
     return ret;
 };
 
-Promise.method = function (fn) {
-    if (typeof fn !== "function") {
-        throw new TypeError("fn must be a function\u000a\u000a    See http://goo.gl/916lJJ\u000a");
-    }
-    return function () {
-        var ret = new Promise(INTERNAL);
-        ret._captureStackTrace();
-        ret._pushContext();
-        var value = tryCatch(fn).apply(this, arguments);
-        ret._popContext();
-        ret._resolveFromSyncValue(value);
-        return ret;
-    };
-};
-
-Promise.attempt = Promise["try"] = function (fn, args, ctx) {
-    if (typeof fn !== "function") {
-        return apiRejection("fn must be a function\u000a\u000a    See http://goo.gl/916lJJ\u000a");
-    }
-    var ret = new Promise(INTERNAL);
-    ret._captureStackTrace();
-    ret._pushContext();
-    var value = isArray(args)
-        ? tryCatch(fn).apply(ctx, args)
-        : tryCatch(fn).call(ctx, args);
-    ret._popContext();
-    ret._resolveFromSyncValue(value);
-    return ret;
-};
-
 Promise.defer = Promise.pending = function () {
     var promise = new Promise(INTERNAL);
     return new PromiseResolver(promise);
-};
-
-Promise.bind = function (thisArg) {
-    var maybePromise = tryConvertToPromise(thisArg);
-    var ret = new Promise(INTERNAL);
-
-    if (maybePromise instanceof Promise) {
-        maybePromise._then(function(thisArg) {
-            ret._setBoundTo(thisArg);
-            ret._fulfill(undefined);
-        }, ret._reject, ret._progress, ret, null);
-    } else {
-        ret._setBoundTo(thisArg);
-        ret._setFulfilled();
-    }
-    return ret;
 };
 
 Promise.cast = function (obj) {
@@ -4775,9 +5066,7 @@ Promise.cast = function (obj) {
     if (!(ret instanceof Promise)) {
         var val = ret;
         ret = new Promise(INTERNAL);
-        ret._setFulfilled();
-        ret._settledValue = val;
-        ret._cleanValues();
+        ret._fulfillUnchecked(val);
     }
     return ret;
 };
@@ -4791,30 +5080,11 @@ Promise.reject = Promise.rejected = function (reason) {
     return ret;
 };
 
-Promise.onPossiblyUnhandledRejection = function (fn) {
-    possiblyUnhandledRejection = typeof fn === "function" ? fn : undefined;
-};
-
-Promise.onUnhandledRejectionHandled = function (fn) {
-    unhandledRejectionHandled = typeof fn === "function" ? fn : undefined;
-};
-
-Promise.longStackTraces = function () {
-    if (async.haveItemsQueued() &&
-        debugging === false
-   ) {
-        throw new Error("cannot enable long stack traces after promises have been created\u000a\u000a    See http://goo.gl/DT1qyG\u000a");
-    }
-    debugging = CapturedTrace.isSupported();
-};
-
-Promise.hasLongStackTraces = function () {
-    return debugging && CapturedTrace.isSupported();
-};
-
 Promise.setScheduler = function(fn) {
     if (typeof fn !== "function") throw new TypeError("fn must be a function\u000a\u000a    See http://goo.gl/916lJJ\u000a");
+    var prev = async._schedule;
     async._schedule = fn;
+    return prev;
 };
 
 Promise.prototype._then = function (
@@ -4834,8 +5104,13 @@ Promise.prototype._then = function (
 
     var target = this._target();
     if (target !== this) {
-        if (receiver === undefined) receiver = this._boundTo;
-        if (!haveInternalData) ret._setIsMigrated();
+        if (!haveInternalData) {
+            ret._setIsMigrated();
+            if (receiver === undefined) {
+                ret._setIsMigratingBinding();
+                receiver = this;
+            }
+        }
     }
 
     var callbackIndex =
@@ -4903,22 +5178,6 @@ Promise.prototype._unsetCancellable = function () {
     this._bitField = this._bitField & (~67108864);
 };
 
-Promise.prototype._setRejectionIsUnhandled = function () {
-    this._bitField = this._bitField | 2097152;
-};
-
-Promise.prototype._unsetRejectionIsUnhandled = function () {
-    this._bitField = this._bitField & (~2097152);
-    if (this._isUnhandledRejectionNotified()) {
-        this._unsetUnhandledRejectionIsNotified();
-        this._notifyUnhandledRejectionIsHandled();
-    }
-};
-
-Promise.prototype._isRejectionUnhandled = function () {
-    return (this._bitField & 2097152) > 0;
-};
-
 Promise.prototype._isSpreadable = function () {
     return (this._bitField & 131072) > 0;
 };
@@ -4937,33 +5196,6 @@ Promise.prototype._unsetIsMigrated = function () {
 
 Promise.prototype._isMigrated = function () {
     return (this._bitField & 4194304) > 0;
-};
-
-Promise.prototype._setUnhandledRejectionIsNotified = function () {
-    this._bitField = this._bitField | 524288;
-};
-
-Promise.prototype._unsetUnhandledRejectionIsNotified = function () {
-    this._bitField = this._bitField & (~524288);
-};
-
-Promise.prototype._isUnhandledRejectionNotified = function () {
-    return (this._bitField & 524288) > 0;
-};
-
-Promise.prototype._setCarriedStackTrace = function (capturedTrace) {
-    this._bitField = this._bitField | 1048576;
-    this._fulfillmentHandler0 = capturedTrace;
-};
-
-Promise.prototype._isCarryingStackTrace = function () {
-    return (this._bitField & 1048576) > 0;
-};
-
-Promise.prototype._getCarriedStackTrace = function () {
-    return this._isCarryingStackTrace()
-        ? this._fulfillmentHandler0
-        : undefined;
 };
 
 Promise.prototype._receiverAt = function (index) {
@@ -4995,14 +5227,19 @@ Promise.prototype._rejectionHandlerAt = function (index) {
         : this[index * 5 - 5 + 1];
 };
 
-Promise.prototype._migrateCallbacks = function (
-    fulfill,
-    reject,
-    progress,
-    promise,
-    receiver
-) {
-    if (promise instanceof Promise) promise._setIsMigrated();
+Promise.prototype._migrateCallbacks = function (follower, index) {
+    var fulfill = follower._fulfillmentHandlerAt(index);
+    var reject = follower._rejectionHandlerAt(index);
+    var progress = follower._progressHandlerAt(index);
+    var promise = follower._promiseAt(index);
+    var receiver = follower._receiverAt(index);
+    if (promise instanceof Promise) {
+        promise._setIsMigrated();
+        if (receiver === undefined) {
+            receiver = follower;
+            promise._setIsMigratingBinding();
+        }
+    }
     this._addCallbacks(fulfill, reject, progress, promise, receiver);
 };
 
@@ -5064,34 +5301,40 @@ Promise.prototype._proxyPromiseArray = function (promiseArray, index) {
     this._setProxyHandlers(promiseArray, index);
 };
 
-Promise.prototype._setBoundTo = function (obj) {
-    if (obj !== undefined) {
-        this._bitField = this._bitField | 8388608;
-        this._boundTo = obj;
+Promise.prototype._resolveCallback = function(value, shouldBind) {
+    if (this._isFollowingOrFulfilledOrRejected()) return;
+    if (value === this)
+        return this._rejectCallback(makeSelfResolutionError(), false, true);
+    var maybePromise = tryConvertToPromise(value, this);
+    if (!(maybePromise instanceof Promise)) return this._fulfill(value);
+
+    var propagationFlags = 1 | (shouldBind ? 4 : 0);
+    this._propagateFrom(maybePromise, propagationFlags);
+    var promise = maybePromise._target();
+    if (promise._isPending()) {
+        var len = this._length();
+        for (var i = 0; i < len; ++i) {
+            promise._migrateCallbacks(this, i);
+        }
+        this._setFollowing();
+        this._setLength(0);
+        this._setFollowee(promise);
+    } else if (promise._isFulfilled()) {
+        this._fulfillUnchecked(promise._value());
     } else {
-        this._bitField = this._bitField & (~8388608);
+        this._rejectUnchecked(promise._reason(),
+            promise._getCarriedStackTrace());
     }
-};
-
-Promise.prototype._isBound = function () {
-    return (this._bitField & 8388608) === 8388608;
-};
-
-Promise.prototype._resolveCallback = function(value) {
-    if (this._tryFollow(value)) {
-        return;
-    }
-    this._fulfill(value);
 };
 
 Promise.prototype._rejectCallback =
 function(reason, synchronous, shouldNotMarkOriginatingFromRejection) {
     if (!shouldNotMarkOriginatingFromRejection) {
-        markAsOriginatingFromRejection(reason);
+        util.markAsOriginatingFromRejection(reason);
     }
     var trace = util.ensureErrorObject(reason);
-    var hasStack = canAttachTrace(reason) &&
-        typeof trace.stack === "string";
+    var hasStack = util.canAttachTrace(reason) &&
+        typeof trace.stack === "string" && trace.stack.length > 0;
     this._attachExtraTrace(trace, synchronous ? hasStack : false);
     this._reject(reason, trace === reason ? undefined : trace);
 };
@@ -5102,15 +5345,20 @@ Promise.prototype._resolveFromResolver = function (resolver) {
     this._pushContext();
     var synchronous = true;
     var r = tryCatch(resolver)(function(value) {
+        if (promise === null) return;
         promise._resolveCallback(value);
+        promise = null;
     }, function (reason) {
+        if (promise === null) return;
         promise._rejectCallback(reason, synchronous);
+        promise = null;
     });
     synchronous = false;
     this._popContext();
 
-    if (r !== undefined && r === errorObj) {
+    if (r !== undefined && r === errorObj && promise !== null) {
         promise._rejectCallback(r.e, true, true);
+        promise = null;
     }
 };
 
@@ -5128,27 +5376,10 @@ Promise.prototype._settlePromiseFromHandler = function (
     promise._popContext();
 
     if (x === errorObj || x === promise || x === NEXT_FILTER) {
-        var err = x === promise
-                    ? makeSelfResolutionError()
-                    : x.e;
-        var trace = canAttachTrace(err) ? err : new Error(util.toString(err));
-        if (x !== NEXT_FILTER) promise._attachExtraTrace(trace);
-        promise._rejectUnchecked(err, trace);
+        var err = x === promise ? makeSelfResolutionError() : x.e;
+        promise._rejectCallback(err, false, true);
     } else {
-        x = tryConvertToPromise(x, promise);
-        if (x instanceof Promise) {
-            x = x._target();
-            if (x._isRejected() &&
-                !x._isCarryingStackTrace() &&
-                !canAttachTrace(x._reason())) {
-                var trace = new Error(util.toString(x._reason()));
-                promise._attachExtraTrace(trace);
-                x._setCarriedStackTrace(trace);
-            }
-            promise._follow(x);
-        } else {
-            promise._fulfillUnchecked(x);
-        }
+        promise._resolveCallback(x);
     }
 };
 
@@ -5164,75 +5395,6 @@ Promise.prototype._followee = function() {
 
 Promise.prototype._setFollowee = function(promise) {
     this._rejectionHandler0 = promise;
-};
-
-Promise.prototype._follow = function (promise) {
-    if (promise._isPending()) {
-        var len = this._length();
-        for (var i = 0; i < len; ++i) {
-            promise._migrateCallbacks(
-                this._fulfillmentHandlerAt(i),
-                this._rejectionHandlerAt(i),
-                this._progressHandlerAt(i),
-                this._promiseAt(i),
-                this._receiverAt(i)
-            );
-        }
-        this._setFollowing();
-        this._setLength(0);
-        this._setFollowee(promise);
-        this._propagateFrom(promise, 1);
-    } else if (promise._isFulfilled()) {
-        this._fulfillUnchecked(promise._value());
-    } else {
-        this._rejectUnchecked(promise._reason(),
-            promise._getCarriedStackTrace());
-    }
-    if (promise._isRejectionUnhandled()) promise._unsetRejectionIsUnhandled();
-};
-
-Promise.prototype._tryFollow = function (value) {
-    if (this._isFollowingOrFulfilledOrRejected() ||
-        value === this) {
-        return false;
-    }
-    var maybePromise = tryConvertToPromise(value, this);
-    if (!(maybePromise instanceof Promise)) {
-        return false;
-    }
-    this._follow(maybePromise._target());
-    return true;
-};
-
-Promise.prototype._captureStackTrace = function () {
-    if (debugging) {
-        this._trace = new CapturedTrace(this._peekContext());
-    }
-    return this;
-};
-
-Promise.prototype._canAttachTrace = function(error) {
-    return debugging && canAttachTrace(error);
-};
-
-Promise.prototype._attachExtraTraceIgnoreSelf = function (error) {
-    if (this._canAttachTrace(error) && this._trace._parent !== undefined) {
-        this._trace._parent.attachExtraTrace(error);
-    }
-};
-
-Promise.prototype._attachExtraTrace = function (error, ignoreSelf) {
-    if (debugging && canAttachTrace(error)) {
-        var trace = this._trace;
-        if (trace !== undefined) {
-            if (ignoreSelf) trace = trace._parent;
-        }
-        if (trace !== undefined) {
-            trace.attachExtraTrace(error);
-        } else {
-            CapturedTrace.cleanHeaderStack(error, true);
-        }
-    }
 };
 
 Promise.prototype._cleanValues = function () {
@@ -5277,7 +5439,10 @@ Promise.prototype._settlePromiseAt = function (index) {
         this._isCarryingStackTrace() ? this._getCarriedStackTrace() : undefined;
     var value = this._settledValue;
     var receiver = this._receiverAt(index);
-
+    if (isPromise && promise._isMigratingBinding()) {
+        promise._unsetIsMigratingBinding();
+        receiver = receiver._boundTo;
+    }
 
     this._clearCallbackDataAtIndex(index);
 
@@ -5341,10 +5506,8 @@ Promise.prototype._unsetSettlePromisesQueued = function () {
 };
 
 Promise.prototype._queueSettlePromises = function() {
-    if (!this._isSettlePromisesQueued()) {
-        async.settlePromises(this);
-        this._setSettlePromisesQueued();
-    }
+    async.settlePromises(this);
+    this._setSettlePromisesQueued();
 };
 
 Promise.prototype._fulfillUnchecked = function (value) {
@@ -5407,139 +5570,50 @@ Promise.prototype._settlePromises = function () {
     }
 };
 
-Promise.prototype._ensurePossibleRejectionHandled = function () {
-    this._setRejectionIsUnhandled();
-    async.invokeLater(this._notifyUnhandledRejection, this, undefined);
-};
-
-Promise.prototype._notifyUnhandledRejectionIsHandled = function () {
-    CapturedTrace.fireRejectionEvent("rejectionHandled",
-                                  unhandledRejectionHandled, undefined, this);
-};
-
-Promise.prototype._notifyUnhandledRejection = function () {
-    if (this._isRejectionUnhandled()) {
-        var reason = this._getCarriedStackTrace() || this._settledValue;
-        this._setUnhandledRejectionIsNotified();
-        CapturedTrace.fireRejectionEvent("unhandledRejection",
-                                      possiblyUnhandledRejection, reason, this);
-    }
-};
-
-var contextStack = [];
-function Context() {
-    this._trace = new CapturedTrace(peekContext());
-}
-Context.prototype._pushContext = function () {
-    if (!debugging) return;
-    if (this._trace !== undefined) {
-        contextStack.push(this._trace);
-    }
-};
-
-Context.prototype._popContext = function () {
-    if (!debugging) return;
-    if (this._trace !== undefined) {
-        contextStack.pop();
-    }
-};
-
- /*jshint unused:false*/
-function createContext() {
-    if (debugging) return new Context();
-}
-
-function peekContext() {
-    var lastIndex = contextStack.length - 1;
-    if (lastIndex >= 0) {
-        return contextStack[lastIndex];
-    }
-    return undefined;
-}
-
-Promise.prototype._peekContext = peekContext;
-Promise.prototype._pushContext = Context.prototype._pushContext;
-Promise.prototype._popContext = Context.prototype._popContext;
-
-Promise.prototype._resolveFromSyncValue = function (value) {
-    if (value === errorObj) {
-        this._setRejected();
-        var reason = value.e;
-        this._settledValue = reason;
-        this._cleanValues();
-        this._attachExtraTrace(reason);
-        this._ensurePossibleRejectionHandled();
-    } else {
-        var maybePromise = tryConvertToPromise(value, this);
-        if (maybePromise instanceof Promise) {
-            maybePromise = maybePromise._target();
-            this._follow(maybePromise);
-        } else {
-            this._setFulfilled();
-            this._settledValue = value;
-            this._cleanValues();
-        }
-    }
-};
-
-
-
-if (!CapturedTrace.isSupported()) {
-    Promise.longStackTraces = function(){};
-    debugging = false;
-}
-
 Promise._makeSelfResolutionError = makeSelfResolutionError;
-require("./finally.js")(Promise, NEXT_FILTER, tryConvertToPromise);
-require("./direct_resolve.js")(Promise);
-require("./synchronous_inspection.js")(Promise);
-require("./join.js")(Promise, PromiseArray, tryConvertToPromise, INTERNAL);
-Promise.RangeError = RangeError;
-Promise.CancellationError = CancellationError;
-Promise.TimeoutError = TimeoutError;
-Promise.TypeError = TypeError;
-Promise.OperationalError = OperationalError;
-Promise.RejectionError = OperationalError;
-Promise.AggregateError = errors.AggregateError;
+_dereq_("./method.js")(Promise, INTERNAL, tryConvertToPromise, apiRejection);
+_dereq_("./bind.js")(Promise, INTERNAL, tryConvertToPromise);
+_dereq_("./finally.js")(Promise, NEXT_FILTER, tryConvertToPromise);
+_dereq_("./direct_resolve.js")(Promise);
+_dereq_("./synchronous_inspection.js")(Promise);
+_dereq_("./join.js")(Promise, PromiseArray, tryConvertToPromise, INTERNAL);
 
 util.toFastProperties(Promise);
 util.toFastProperties(Promise.prototype);
 Promise.Promise = Promise;
 CapturedTrace.setBounds(async.firstLineError, util.lastLineError);
-require('./nodeify.js')(Promise);
-require('./using.js')(Promise, apiRejection, tryConvertToPromise, createContext);
-require('./generators.js')(Promise, apiRejection, INTERNAL, tryConvertToPromise);
-require('./map.js')(Promise, PromiseArray, apiRejection, tryConvertToPromise, INTERNAL);
-require('./cancel.js')(Promise, INTERNAL);
-require('./promisify.js')(Promise, INTERNAL);
-require('./props.js')(Promise, PromiseArray, tryConvertToPromise);
-require('./race.js')(Promise, INTERNAL, tryConvertToPromise);
-require('./reduce.js')(Promise, PromiseArray, apiRejection, tryConvertToPromise, INTERNAL);
-require('./settle.js')(Promise, PromiseArray);
-require('./call_get.js')(Promise);
-require('./some.js')(Promise, PromiseArray, apiRejection);
-require('./progress.js')(Promise, PromiseArray);
-require('./any.js')(Promise);
-require('./each.js')(Promise, INTERNAL);
-require('./timers.js')(Promise, INTERNAL, tryConvertToPromise);
-require('./filter.js')(Promise, INTERNAL);
+_dereq_('./map.js')(Promise, PromiseArray, apiRejection, tryConvertToPromise, INTERNAL);
+_dereq_('./using.js')(Promise, apiRejection, tryConvertToPromise, createContext);
+_dereq_('./generators.js')(Promise, apiRejection, INTERNAL, tryConvertToPromise);
+_dereq_('./nodeify.js')(Promise);
+_dereq_('./cancel.js')(Promise);
+_dereq_('./promisify.js')(Promise, INTERNAL);
+_dereq_('./props.js')(Promise, PromiseArray, tryConvertToPromise, apiRejection);
+_dereq_('./race.js')(Promise, INTERNAL, tryConvertToPromise, apiRejection);
+_dereq_('./reduce.js')(Promise, PromiseArray, apiRejection, tryConvertToPromise, INTERNAL);
+_dereq_('./settle.js')(Promise, PromiseArray);
+_dereq_('./call_get.js')(Promise);
+_dereq_('./some.js')(Promise, PromiseArray, apiRejection);
+_dereq_('./progress.js')(Promise, PromiseArray);
+_dereq_('./any.js')(Promise);
+_dereq_('./each.js')(Promise, INTERNAL);
+_dereq_('./timers.js')(Promise, INTERNAL);
+_dereq_('./filter.js')(Promise, INTERNAL);
 
 Promise.prototype = Promise.prototype;
 return Promise;
 
 };
 
-}).call(this,require('_process'))
-},{"./any.js":7,"./async.js":8,"./call_get.js":10,"./cancel.js":11,"./captured_trace.js":12,"./catch_filter.js":13,"./direct_resolve.js":14,"./each.js":15,"./errors.js":16,"./errors_api_rejection":17,"./filter.js":19,"./finally.js":20,"./generators.js":21,"./join.js":22,"./map.js":23,"./nodeify.js":24,"./progress.js":25,"./promise_array.js":27,"./promise_resolver.js":28,"./promisify.js":29,"./props.js":30,"./race.js":32,"./reduce.js":33,"./settle.js":35,"./some.js":36,"./synchronous_inspection.js":37,"./thenables.js":38,"./timers.js":39,"./using.js":40,"./util.js":41,"_process":51}],27:[function(require,module,exports){
+},{"./any.js":1,"./async.js":2,"./bind.js":3,"./call_get.js":5,"./cancel.js":6,"./captured_trace.js":7,"./catch_filter.js":8,"./context.js":9,"./debuggability.js":10,"./direct_resolve.js":11,"./each.js":12,"./errors.js":13,"./filter.js":15,"./finally.js":16,"./generators.js":17,"./join.js":18,"./map.js":19,"./method.js":20,"./nodeify.js":21,"./progress.js":22,"./promise_array.js":24,"./promise_resolver.js":25,"./promisify.js":26,"./props.js":27,"./race.js":29,"./reduce.js":30,"./settle.js":32,"./some.js":33,"./synchronous_inspection.js":34,"./thenables.js":35,"./timers.js":36,"./using.js":37,"./util.js":38}],24:[function(_dereq_,module,exports){
 "use strict";
 module.exports = function(Promise, INTERNAL, tryConvertToPromise,
     apiRejection) {
-var util = require("./util.js");
+var util = _dereq_("./util.js");
 var isArray = util.isArray;
 
 function toResolutionValue(val) {
     switch(val) {
-    case -1: return undefined;
     case -2: return [];
     case -3: return {};
     }
@@ -5592,7 +5666,7 @@ PromiseArray.prototype._init = function init(_, resolveValueIfEmpty) {
             return;
         }
     } else if (!isArray(values)) {
-        this._promise._follow(apiRejection("expecting an array, a promise or a thenable\u000a\u000a    See http://goo.gl/s8MMhc\u000a"));
+        this._promise._reject(apiRejection("expecting an array, a promise or a thenable\u000a\u000a    See http://goo.gl/s8MMhc\u000a")._reason());
         return;
     }
 
@@ -5676,15 +5750,15 @@ PromiseArray.prototype.getActualLength = function (len) {
 return PromiseArray;
 };
 
-},{"./util.js":41}],28:[function(require,module,exports){
+},{"./util.js":38}],25:[function(_dereq_,module,exports){
 "use strict";
-var util = require("./util.js");
+var util = _dereq_("./util.js");
 var maybeWrapAsError = util.maybeWrapAsError;
-var errors = require("./errors.js");
+var errors = _dereq_("./errors.js");
 var TimeoutError = errors.TimeoutError;
 var OperationalError = errors.OperationalError;
 var haveGetters = util.haveGetters;
-var es5 = require("./es5.js");
+var es5 = _dereq_("./es5.js");
 
 function isUntypedError(obj) {
     return obj instanceof Error &&
@@ -5783,8 +5857,8 @@ PromiseResolver.prototype.progress = function (value) {
     this.promise._progress(value);
 };
 
-PromiseResolver.prototype.cancel = function () {
-    this.promise.cancel();
+PromiseResolver.prototype.cancel = function (err) {
+    this.promise.cancel(err);
 };
 
 PromiseResolver.prototype.timeout = function () {
@@ -5801,17 +5875,17 @@ PromiseResolver.prototype.toJSON = function () {
 
 module.exports = PromiseResolver;
 
-},{"./errors.js":16,"./es5.js":18,"./util.js":41}],29:[function(require,module,exports){
+},{"./errors.js":13,"./es5.js":14,"./util.js":38}],26:[function(_dereq_,module,exports){
 "use strict";
 module.exports = function(Promise, INTERNAL) {
 var THIS = {};
-var util = require("./util.js");
-var nodebackForPromise = require("./promise_resolver.js")
+var util = _dereq_("./util.js");
+var nodebackForPromise = _dereq_("./promise_resolver.js")
     ._nodebackForPromise;
 var withAppended = util.withAppended;
 var maybeWrapAsError = util.maybeWrapAsError;
 var canEvaluate = util.canEvaluate;
-var TypeError = require("./errors").TypeError;
+var TypeError = _dereq_("./errors").TypeError;
 var defaultSuffix = "Async";
 var defaultFilter = function(name, func) {
     return util.isIdentifier(name) &&
@@ -5819,11 +5893,6 @@ var defaultFilter = function(name, func) {
         !util.isClass(func);
 };
 var defaultPromisified = {__isPromisified__: true};
-
-
-function escapeIdentRegex(str) {
-    return str.replace(/([$])/, "\\$");
-}
 
 function isPromisified(fn) {
     try {
@@ -5873,42 +5942,48 @@ function promisifiableMethods(obj, suffix, suffixRegexp, filter) {
     return ret;
 }
 
-function switchCaseArgumentOrder(likelyArgumentCount) {
+var escapeIdentRegex = function(str) {
+    return str.replace(/([$])/, "\\$");
+};
+
+var makeNodePromisifiedEval;
+if (!true) {
+var switchCaseArgumentOrder = function(likelyArgumentCount) {
     var ret = [likelyArgumentCount];
     var min = Math.max(0, likelyArgumentCount - 1 - 5);
     for(var i = likelyArgumentCount - 1; i >= min; --i) {
-        if (i === likelyArgumentCount) continue;
         ret.push(i);
     }
     for(var i = likelyArgumentCount + 1; i <= 5; ++i) {
         ret.push(i);
     }
     return ret;
-}
+};
 
-function argumentSequence(argumentCount) {
+var argumentSequence = function(argumentCount) {
     return util.filledRange(argumentCount, "arguments[", "]");
-}
+};
 
-function parameterDeclaration(parameterCount) {
+var parameterDeclaration = function(parameterCount) {
     return util.filledRange(parameterCount, "_arg", "");
-}
+};
 
-function parameterCount(fn) {
+var parameterCount = function(fn) {
     if (typeof fn.length === "number") {
         return Math.max(Math.min(fn.length, 1023 + 1), 0);
     }
     return 0;
-}
+};
 
-function generatePropertyAccess(key) {
+var generatePropertyAccess = function(key) {
     if (util.isIdentifier(key)) {
         return "." + key;
     }
     else return "['" + key.replace(/(['\\])/g, "\\$1") + "']";
-}
+};
 
-function makeNodePromisifiedEval(callback, receiver, originalName, fn, suffix) {
+makeNodePromisifiedEval =
+function(callback, receiver, originalName, fn, suffix) {
     var newParameterCount = Math.max(0, parameterCount(fn) - 1);
     var argumentOrder = switchCaseArgumentOrder(newParameterCount);
     var callbackName =
@@ -6019,6 +6094,7 @@ function makeNodePromisifiedEval(callback, receiver, originalName, fn, suffix) {
             nodebackForPromise,
             INTERNAL
         );
+};
 }
 
 function makeNodePromisifiedClosure(callback, receiver) {
@@ -6113,13 +6189,13 @@ Promise.promisifyAll = function (target, options) {
 };
 
 
-},{"./errors":16,"./promise_resolver.js":28,"./util.js":41}],30:[function(require,module,exports){
+},{"./errors":13,"./promise_resolver.js":25,"./util.js":38}],27:[function(_dereq_,module,exports){
 "use strict";
-module.exports = function(Promise, PromiseArray, tryConvertToPromise) {
-var util = require("./util.js");
-var apiRejection = require("./errors_api_rejection")(Promise);
+module.exports = function(
+    Promise, PromiseArray, tryConvertToPromise, apiRejection) {
+var util = _dereq_("./util.js");
 var isObject = util.isObject;
-var es5 = require("./es5.js");
+var es5 = _dereq_("./es5.js");
 
 function PropertiesPromiseArray(obj) {
     var keys = es5.keys(obj);
@@ -6194,7 +6270,7 @@ Promise.props = function (promises) {
 };
 };
 
-},{"./errors_api_rejection":17,"./es5.js":18,"./util.js":41}],31:[function(require,module,exports){
+},{"./es5.js":14,"./util.js":38}],28:[function(_dereq_,module,exports){
 "use strict";
 function arrayMove(src, srcIndex, dst, dstIndex, len) {
     for (var j = 0; j < len; ++j) {
@@ -6280,19 +6356,17 @@ Queue.prototype._resizeTo = function (capacity) {
     this._capacity = capacity;
     var front = this._front;
     var length = this._length;
-    if (front + length > oldCapacity) {
-        var moveItemsCount = (front + length) & (oldCapacity - 1);
-        arrayMove(this, 0, this, oldCapacity, moveItemsCount);
-    }
+    var moveItemsCount = (front + length) & (oldCapacity - 1);
+    arrayMove(this, 0, this, oldCapacity, moveItemsCount);
 };
 
 module.exports = Queue;
 
-},{}],32:[function(require,module,exports){
+},{}],29:[function(_dereq_,module,exports){
 "use strict";
-module.exports = function(Promise, INTERNAL, tryConvertToPromise) {
-var apiRejection = require("./errors_api_rejection.js")(Promise);
-var isArray = require("./util.js").isArray;
+module.exports = function(
+    Promise, INTERNAL, tryConvertToPromise, apiRejection) {
+var isArray = _dereq_("./util.js").isArray;
 
 var raceLater = function (promise) {
     return promise.then(function(array) {
@@ -6337,14 +6411,14 @@ Promise.prototype.race = function () {
 
 };
 
-},{"./errors_api_rejection.js":17,"./util.js":41}],33:[function(require,module,exports){
+},{"./util.js":38}],30:[function(_dereq_,module,exports){
 "use strict";
 module.exports = function(Promise,
                           PromiseArray,
                           apiRejection,
                           tryConvertToPromise,
                           INTERNAL) {
-var util = require("./util.js");
+var util = _dereq_("./util.js");
 var tryCatch = util.tryCatch;
 var errorObj = util.errorObj;
 function ReductionPromiseArray(promises, fn, accum, _each) {
@@ -6396,7 +6470,7 @@ ReductionPromiseArray.prototype._promiseFulfilled = function (value, index) {
     var valuesPhase = this._valuesPhase;
     var valuesPhaseIndex;
     if (!valuesPhase) {
-        valuesPhase = this._valuesPhase = Array(length);
+        valuesPhase = this._valuesPhase = new Array(length);
         for (valuesPhaseIndex=0; valuesPhaseIndex<length; ++valuesPhaseIndex) {
             valuesPhase[valuesPhaseIndex] = 0;
         }
@@ -6404,26 +6478,19 @@ ReductionPromiseArray.prototype._promiseFulfilled = function (value, index) {
     valuesPhaseIndex = valuesPhase[index];
 
     if (index === 0 && this._zerothIsAccum) {
-        if (!gotAccum) {
-            this._accum = value;
-            this._gotAccum = gotAccum = true;
-        }
+        this._accum = value;
+        this._gotAccum = gotAccum = true;
         valuesPhase[index] = ((valuesPhaseIndex === 0)
             ? 1 : 2);
     } else if (index === -1) {
-        if (!gotAccum) {
-            this._accum = value;
-            this._gotAccum = gotAccum = true;
-        }
+        this._accum = value;
+        this._gotAccum = gotAccum = true;
     } else {
         if (valuesPhaseIndex === 0) {
             valuesPhase[index] = 1;
-        }
-        else {
+        } else {
             valuesPhase[index] = 2;
-            if (gotAccum) {
-                this._accum = value;
-            }
+            this._accum = value;
         }
     }
     if (!gotAccum) return;
@@ -6440,17 +6507,6 @@ ReductionPromiseArray.prototype._promiseFulfilled = function (value, index) {
         }
         if (valuesPhaseIndex !== 1) return;
         value = values[i];
-        if (value instanceof Promise) {
-            value = value._target();
-            if (value._isFulfilled()) {
-                value = value._value();
-            } else if (value._isPending()) {
-                return;
-            } else {
-                return this._reject(value._reason());
-            }
-        }
-
         this._promise._pushContext();
         if (isEach) {
             preservedValues.push(value);
@@ -6481,7 +6537,6 @@ ReductionPromiseArray.prototype._promiseFulfilled = function (value, index) {
         this._accum = ret;
     }
 
-    if (this._reducingIndex < length) return;
     this._resolve(isEach ? preservedValues : this._accum);
 };
 
@@ -6500,13 +6555,13 @@ Promise.reduce = function (promises, fn, initialValue, _each) {
 };
 };
 
-},{"./util.js":41}],34:[function(require,module,exports){
-(function (process){
+},{"./util.js":38}],31:[function(_dereq_,module,exports){
 "use strict";
 var schedule;
 if (typeof process === "object" && typeof process.version === "string") {
-    schedule = parseInt(process.version.split(".")[1], 10) > 10
-        ? setImmediate : process.nextTick;
+    var version = process.version.split(".").map(Number);
+    schedule = (version[0] === 0 && version[1] > 10) || (version[0] > 0)
+        ? global.setImmediate : process.nextTick;
 }
 else if (typeof MutationObserver !== "undefined") {
     schedule = function(fn) {
@@ -6529,13 +6584,12 @@ else {
 }
 module.exports = schedule;
 
-}).call(this,require('_process'))
-},{"_process":51}],35:[function(require,module,exports){
+},{}],32:[function(_dereq_,module,exports){
 "use strict";
 module.exports =
     function(Promise, PromiseArray) {
 var PromiseInspection = Promise.PromiseInspection;
-var util = require("./util.js");
+var util = _dereq_("./util.js");
 
 function SettledPromiseArray(values) {
     this.constructor$(values);
@@ -6573,13 +6627,13 @@ Promise.prototype.settle = function () {
 };
 };
 
-},{"./util.js":41}],36:[function(require,module,exports){
+},{"./util.js":38}],33:[function(_dereq_,module,exports){
 "use strict";
 module.exports =
 function(Promise, PromiseArray, apiRejection) {
-var util = require("./util.js");
-var RangeError = require("./errors.js").RangeError;
-var AggregateError = require("./errors.js").AggregateError;
+var util = _dereq_("./util.js");
+var RangeError = _dereq_("./errors.js").RangeError;
+var AggregateError = _dereq_("./errors.js").AggregateError;
 var isArray = util.isArray;
 
 
@@ -6623,7 +6677,6 @@ SomePromiseArray.prototype.howMany = function () {
 };
 
 SomePromiseArray.prototype.setHowMany = function (count) {
-    if (this._isResolved()) return;
     this._howMany = count;
 };
 
@@ -6686,9 +6739,6 @@ function some(promises, howMany) {
     }
     var ret = new SomePromiseArray(promises);
     var promise = ret.promise();
-    if (promise.isRejected()) {
-        return promise;
-    }
     ret.setHowMany(howMany);
     ret.init();
     return promise;
@@ -6705,16 +6755,14 @@ Promise.prototype.some = function (howMany) {
 Promise._SomePromiseArray = SomePromiseArray;
 };
 
-},{"./errors.js":16,"./util.js":41}],37:[function(require,module,exports){
+},{"./errors.js":13,"./util.js":38}],34:[function(_dereq_,module,exports){
 "use strict";
 module.exports = function(Promise) {
 function PromiseInspection(promise) {
     if (promise !== undefined) {
         promise = promise._target();
         this._bitField = promise._bitField;
-        this._settledValue = promise._isResolved()
-            ? promise._settledValue
-            : undefined;
+        this._settledValue = promise._settledValue;
     }
     else {
         this._bitField = 0;
@@ -6795,6 +6843,7 @@ Promise.prototype.reason = function() {
     if (!target.isRejected()) {
         throw new TypeError("cannot get rejection reason of a non-rejected promise\u000a\u000a    See http://goo.gl/hPuiwB\u000a");
     }
+    target._unsetRejectionIsUnhandled();
     return target._settledValue;
 };
 
@@ -6802,10 +6851,10 @@ Promise.prototype.reason = function() {
 Promise.PromiseInspection = PromiseInspection;
 };
 
-},{}],38:[function(require,module,exports){
+},{}],35:[function(_dereq_,module,exports){
 "use strict";
 module.exports = function(Promise, INTERNAL) {
-var util = require("./util.js");
+var util = _dereq_("./util.js");
 var errorObj = util.errorObj;
 var isObject = util.isObject;
 
@@ -6849,49 +6898,54 @@ function isAnyBluebirdPromise(obj) {
 
 function doThenable(x, then, context) {
     var promise = new Promise(INTERNAL);
+    var ret = promise;
     if (context) context._pushContext();
     promise._captureStackTrace();
     if (context) context._popContext();
     var synchronous = true;
-    try {
-        then.call(
-            x,
-            resolveFromThenable,
-            rejectFromThenable,
-            progressFromThenable
-        );
-    } catch(e) {
-        promise._rejectCallback(e, true, true);
-    }
+    var result = util.tryCatch(then).call(x,
+                                        resolveFromThenable,
+                                        rejectFromThenable,
+                                        progressFromThenable);
     synchronous = false;
+    if (promise && result === errorObj) {
+        promise._rejectCallback(result.e, true, true);
+        promise = null;
+    }
 
     function resolveFromThenable(value) {
+        if (!promise) return;
         if (x === value) {
-            return promise._rejectCallback(
+            promise._rejectCallback(
                 Promise._makeSelfResolutionError(), false, true);
+        } else {
+            promise._resolveCallback(value);
         }
-        promise._resolveCallback(value);
+        promise = null;
     }
 
     function rejectFromThenable(reason) {
+        if (!promise) return;
         promise._rejectCallback(reason, synchronous, true);
+        promise = null;
     }
 
     function progressFromThenable(value) {
+        if (!promise) return;
         if (typeof promise._progress === "function") {
             promise._progress(value);
         }
     }
-    return promise;
+    return ret;
 }
 
 return tryConvertToPromise;
 };
 
-},{"./util.js":41}],39:[function(require,module,exports){
+},{"./util.js":38}],36:[function(_dereq_,module,exports){
 "use strict";
-module.exports = function(Promise, INTERNAL, tryConvertToPromise) {
-var util = require("./util.js");
+module.exports = function(Promise, INTERNAL) {
+var util = _dereq_("./util.js");
 var TimeoutError = Promise.TimeoutError;
 
 var afterTimeout = function (promise, message) {
@@ -6905,31 +6959,17 @@ var afterTimeout = function (promise, message) {
     promise._cancel(err);
 };
 
-var afterDelay = function (value, promise) {
-    promise._fulfill(value);
-};
-
+var afterValue = function(value) { return delay(+this).thenReturn(value); };
 var delay = Promise.delay = function (value, ms) {
     if (ms === undefined) {
         ms = value;
         value = undefined;
+        var ret = new Promise(INTERNAL);
+        setTimeout(function() { ret._fulfill(); }, ms);
+        return ret;
     }
     ms = +ms;
-    var maybePromise = tryConvertToPromise(value);
-    var promise = new Promise(INTERNAL);
-
-    if (maybePromise instanceof Promise) {
-        promise._propagateFrom(maybePromise, 4 | 1);
-        promise._follow(maybePromise._target());
-        return promise.then(function(value) {
-            return Promise.delay(value, ms);
-        });
-    } else {
-        setTimeout(function delayTimeout() {
-            afterDelay(value, promise);
-        }, ms);
-    }
-    return promise;
+    return Promise.resolve(value)._then(afterValue, null, null, ms, undefined);
 };
 
 Promise.prototype.delay = function (ms) {
@@ -6937,25 +6977,19 @@ Promise.prototype.delay = function (ms) {
 };
 
 function successClear(value) {
-    var handle = this;
-    if (handle instanceof Number) handle = +handle;
-    clearTimeout(handle);
+    clearTimeout(+this);
     return value;
 }
 
 function failureClear(reason) {
-    var handle = this;
-    if (handle instanceof Number) handle = +handle;
-    clearTimeout(handle);
+    clearTimeout(+this);
     throw reason;
 }
 
 Promise.prototype.timeout = function (ms, message) {
-    var target = this._target();
     ms = +ms;
-    var ret = new Promise(INTERNAL).cancellable();
-    ret._propagateFrom(this, 4 | 1);
-    ret._follow(target);
+    var ret = this.then().cancellable();
+    ret._cancellationParent = this;
     var handle = setTimeout(function timeoutTimeout() {
         afterTimeout(ret, message);
     }, ms);
@@ -6964,12 +6998,12 @@ Promise.prototype.timeout = function (ms, message) {
 
 };
 
-},{"./util.js":41}],40:[function(require,module,exports){
+},{"./util.js":38}],37:[function(_dereq_,module,exports){
 "use strict";
 module.exports = function (Promise, apiRejection, tryConvertToPromise,
     createContext) {
-    var TypeError = require("./errors.js").TypeError;
-    var inherits = require("./util.js").inherits;
+    var TypeError = _dereq_("./errors.js").TypeError;
+    var inherits = _dereq_("./util.js").inherits;
     var PromiseInspection = Promise.PromiseInspection;
 
     function inspectionMapper(inspections) {
@@ -7078,8 +7112,8 @@ module.exports = function (Promise, apiRejection, tryConvertToPromise,
                 typeof d.tryDispose === "function");
     };
 
-    function FunctionDisposer(fn, promise) {
-        this.constructor$(fn, promise);
+    function FunctionDisposer(fn, promise, context) {
+        this.constructor$(fn, promise, context);
     }
     inherits(FunctionDisposer, Disposer);
 
@@ -7168,9 +7202,9 @@ module.exports = function (Promise, apiRejection, tryConvertToPromise,
 
 };
 
-},{"./errors.js":16,"./util.js":41}],41:[function(require,module,exports){
+},{"./errors.js":13,"./util.js":38}],38:[function(_dereq_,module,exports){
 "use strict";
-var es5 = require("./es5.js");
+var es5 = _dereq_("./es5.js");
 var canEvaluate = typeof navigator == "undefined";
 var haveGetters = (function(){
     try {
@@ -7432,7 +7466,10 @@ var ret = {
 try {throw new Error(); } catch (e) {ret.lastLineError = e;}
 module.exports = ret;
 
-},{"./es5.js":18}],42:[function(require,module,exports){
+},{"./es5.js":14}]},{},[4])(4)
+});                    ;if (typeof window !== 'undefined' && window !== null) {                               window.P = window.Promise;                                                     } else if (typeof self !== 'undefined' && self !== null) {                             self.P = self.Promise;                                                         }
+}).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
+},{"_process":17}],8:[function(require,module,exports){
 
 /**
  * This is the web browser implementation of `debug()`.
@@ -7592,7 +7629,7 @@ function load() {
 
 exports.enable(load());
 
-},{"./debug":43}],43:[function(require,module,exports){
+},{"./debug":9}],9:[function(require,module,exports){
 
 /**
  * This is the common logic for both the Node.js and web browser
@@ -7791,7 +7828,7 @@ function coerce(val) {
   return val;
 }
 
-},{"ms":44}],44:[function(require,module,exports){
+},{"ms":10}],10:[function(require,module,exports){
 /**
  * Helpers.
  */
@@ -7904,9 +7941,9 @@ function plural(ms, n, name) {
   return Math.ceil(ms / n) + ' ' + name + 's';
 }
 
-},{}],45:[function(require,module,exports){
+},{}],11:[function(require,module,exports){
 
-},{}],46:[function(require,module,exports){
+},{}],12:[function(require,module,exports){
 /*!
  * The buffer module from node.js, for the browser.
  *
@@ -9224,7 +9261,7 @@ function decodeUtf8Char (str) {
   }
 }
 
-},{"base64-js":47,"ieee754":48,"is-array":49}],47:[function(require,module,exports){
+},{"base64-js":13,"ieee754":14,"is-array":15}],13:[function(require,module,exports){
 var lookup = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
 
 ;(function (exports) {
@@ -9350,7 +9387,7 @@ var lookup = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
 	exports.fromByteArray = uint8ToBase64
 }(typeof exports === 'undefined' ? (this.base64js = {}) : exports))
 
-},{}],48:[function(require,module,exports){
+},{}],14:[function(require,module,exports){
 exports.read = function(buffer, offset, isLE, mLen, nBytes) {
   var e, m,
       eLen = nBytes * 8 - mLen - 1,
@@ -9436,7 +9473,7 @@ exports.write = function(buffer, value, offset, isLE, mLen, nBytes) {
   buffer[offset + i - d] |= s * 128;
 };
 
-},{}],49:[function(require,module,exports){
+},{}],15:[function(require,module,exports){
 
 /**
  * isArray
@@ -9471,7 +9508,7 @@ module.exports = isArray || function (val) {
   return !! val && '[object Array]' == str.call(val);
 };
 
-},{}],50:[function(require,module,exports){
+},{}],16:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -9774,7 +9811,7 @@ function isUndefined(arg) {
   return arg === void 0;
 }
 
-},{}],51:[function(require,module,exports){
+},{}],17:[function(require,module,exports){
 // shim for using process in browser
 
 var process = module.exports = {};
@@ -9833,7 +9870,7 @@ process.chdir = function (dir) {
 };
 process.umask = function() { return 0; };
 
-},{}],52:[function(require,module,exports){
+},{}],18:[function(require,module,exports){
 "use strict";
 
 var utils = require('./utils');
@@ -10641,7 +10678,7 @@ AbstractPouchDB.prototype.registerDependentDatabase =
   });
 });
 
-},{"./changes":63,"./deps/errors":69,"./deps/upsert":73,"./merge":78,"./utils":83,"events":50}],53:[function(require,module,exports){
+},{"./changes":29,"./deps/errors":35,"./deps/upsert":39,"./merge":44,"./utils":49,"events":16}],19:[function(require,module,exports){
 (function (process,Buffer){
 "use strict";
 
@@ -11709,7 +11746,7 @@ HttpPouch.valid = function () {
 module.exports = HttpPouch;
 
 }).call(this,require('_process'),require("buffer").Buffer)
-},{"../../deps/errors":69,"../../utils":83,"_process":51,"buffer":46,"debug":42}],54:[function(require,module,exports){
+},{"../../deps/errors":35,"../../utils":49,"_process":17,"buffer":12,"debug":8}],20:[function(require,module,exports){
 'use strict';
 
 var utils = require('../../utils');
@@ -12063,7 +12100,7 @@ function idbBulkDocs(req, opts, api, idb, Changes, callback) {
 }
 
 module.exports = idbBulkDocs;
-},{"../../deps/errors":69,"../../utils":83,"./idb-constants":55,"./idb-utils":56}],55:[function(require,module,exports){
+},{"../../deps/errors":35,"../../utils":49,"./idb-constants":21,"./idb-utils":22}],21:[function(require,module,exports){
 'use strict';
 
 // IndexedDB requires a versioned database structure, so we use the
@@ -12090,7 +12127,7 @@ exports.META_STORE = 'meta-store';
 exports.LOCAL_STORE = 'local-store';
 // Where we detect blob support
 exports.DETECT_BLOB_SUPPORT_STORE = 'detect-blob-support';
-},{}],56:[function(require,module,exports){
+},{}],22:[function(require,module,exports){
 (function (process){
 'use strict';
 
@@ -12325,7 +12362,7 @@ exports.compactRevs = function (revs, docId, txn) {
 };
 
 }).call(this,require('_process'))
-},{"../../deps/errors":69,"../../utils":83,"./idb-constants":55,"_process":51}],57:[function(require,module,exports){
+},{"../../deps/errors":35,"../../utils":49,"./idb-constants":21,"_process":17}],23:[function(require,module,exports){
 (function (process){
 'use strict';
 
@@ -13441,9 +13478,9 @@ IdbPouch.Changes = new utils.Changes();
 module.exports = IdbPouch;
 
 }).call(this,require('_process'))
-},{"../../deps/errors":69,"../../merge":78,"../../utils":83,"./idb-bulk-docs":54,"./idb-constants":55,"./idb-utils":56,"_process":51}],58:[function(require,module,exports){
+},{"../../deps/errors":35,"../../merge":44,"../../utils":49,"./idb-bulk-docs":20,"./idb-constants":21,"./idb-utils":22,"_process":17}],24:[function(require,module,exports){
 module.exports = ['idb', 'websql'];
-},{}],59:[function(require,module,exports){
+},{}],25:[function(require,module,exports){
 'use strict';
 
 var utils = require('../../utils');
@@ -13768,7 +13805,7 @@ function websqlBulkDocs(req, opts, api, db, Changes, callback) {
 }
 
 module.exports = websqlBulkDocs;
-},{"../../deps/errors":69,"../../utils":83,"./websql-constants":60,"./websql-utils":61}],60:[function(require,module,exports){
+},{"../../deps/errors":35,"../../utils":49,"./websql-constants":26,"./websql-utils":27}],26:[function(require,module,exports){
 'use strict';
 
 function quote(str) {
@@ -13792,7 +13829,7 @@ exports.META_STORE = quote('metadata-store');
 exports.ATTACH_AND_SEQ_STORE = quote('attach-seq-store');
 
 
-},{}],61:[function(require,module,exports){
+},{}],27:[function(require,module,exports){
 'use strict';
 
 var utils = require('../../utils');
@@ -13980,7 +14017,7 @@ module.exports = {
   unknownError: unknownError,
   getSize: getSize
 };
-},{"../../deps/errors":69,"../../utils":83,"./websql-constants":60}],62:[function(require,module,exports){
+},{"../../deps/errors":35,"../../utils":49,"./websql-constants":26}],28:[function(require,module,exports){
 'use strict';
 
 var utils = require('../../utils');
@@ -15002,7 +15039,7 @@ WebSqlPouch.Changes = new utils.Changes();
 
 module.exports = WebSqlPouch;
 
-},{"../../deps/errors":69,"../../deps/parse-hex":71,"../../merge":78,"../../utils":83,"./websql-bulk-docs":59,"./websql-constants":60,"./websql-utils":61}],63:[function(require,module,exports){
+},{"../../deps/errors":35,"../../deps/parse-hex":37,"../../merge":44,"../../utils":49,"./websql-bulk-docs":25,"./websql-constants":26,"./websql-utils":27}],29:[function(require,module,exports){
 'use strict';
 var utils = require('./utils');
 var merge = require('./merge');
@@ -15258,7 +15295,7 @@ Changes.prototype.filterChanges = function (opts) {
     });
   }
 };
-},{"./deps/errors":69,"./evalFilter":75,"./evalView":76,"./merge":78,"./utils":83,"events":50}],64:[function(require,module,exports){
+},{"./deps/errors":35,"./evalFilter":41,"./evalView":42,"./merge":44,"./utils":49,"events":16}],30:[function(require,module,exports){
 'use strict';
 
 var utils = require('./utils');
@@ -15354,7 +15391,7 @@ Checkpointer.prototype.getCheckpoint = function () {
 
 module.exports = Checkpointer;
 
-},{"./utils":83,"pouchdb-collate":105}],65:[function(require,module,exports){
+},{"./utils":49,"pouchdb-collate":71}],31:[function(require,module,exports){
 (function (process,global){
 /*globals cordova */
 "use strict";
@@ -15526,7 +15563,7 @@ PouchDB.debug = require('debug');
 module.exports = PouchDB;
 
 }).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./adapter":52,"./taskqueue":82,"./utils":83,"_process":51,"debug":42}],66:[function(require,module,exports){
+},{"./adapter":18,"./taskqueue":48,"./utils":49,"_process":17,"debug":8}],32:[function(require,module,exports){
 "use strict";
 
 var createBlob = require('./blob.js');
@@ -15716,7 +15753,7 @@ function ajax(options, adapterCallback) {
 
 module.exports = ajax;
 
-},{"../utils":83,"./blob.js":67,"./errors":69}],67:[function(require,module,exports){
+},{"../utils":49,"./blob.js":33,"./errors":35}],33:[function(require,module,exports){
 (function (global){
 "use strict";
 
@@ -15748,7 +15785,7 @@ module.exports = createBlob;
 
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],68:[function(require,module,exports){
+},{}],34:[function(require,module,exports){
 'use strict';
 exports.Map = LazyMap; // TODO: use ES6 map
 exports.Set = LazySet; // TODO: use ES6 set
@@ -15819,7 +15856,7 @@ LazySet.prototype.has = function (key) {
 LazySet.prototype["delete"] = function (key) {
   return this.store["delete"](key);
 };
-},{}],69:[function(require,module,exports){
+},{}],35:[function(require,module,exports){
 "use strict";
 
 function PouchError(opts) {
@@ -16079,7 +16116,7 @@ exports.generateErrorFromResponse = function (res) {
   return error;
 };
 
-},{}],70:[function(require,module,exports){
+},{}],36:[function(require,module,exports){
 (function (process,global){
 'use strict';
 
@@ -16197,7 +16234,7 @@ module.exports = function (data, callback) {
 };
 
 }).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"_process":51,"crypto":45,"spark-md5":114}],71:[function(require,module,exports){
+},{"_process":17,"crypto":11,"spark-md5":80}],37:[function(require,module,exports){
 'use strict';
 
 //
@@ -16265,7 +16302,7 @@ function parseHexString(str, encoding) {
 }
 
 module.exports = parseHexString;
-},{}],72:[function(require,module,exports){
+},{}],38:[function(require,module,exports){
 'use strict';
 
 // originally parseUri 1.2.2, now patched by us
@@ -16311,7 +16348,7 @@ function parseUri(str) {
 
 
 module.exports = parseUri;
-},{}],73:[function(require,module,exports){
+},{}],39:[function(require,module,exports){
 'use strict';
 var Promise = require('../utils').Promise;
 
@@ -16362,7 +16399,7 @@ module.exports = function (db, docId, diffFun, cb) {
   }
 };
 
-},{"../utils":83}],74:[function(require,module,exports){
+},{"../utils":49}],40:[function(require,module,exports){
 "use strict";
 
 // BEGIN Math.uuid.js
@@ -16447,7 +16484,7 @@ function uuid(len, radix) {
 module.exports = uuid;
 
 
-},{}],75:[function(require,module,exports){
+},{}],41:[function(require,module,exports){
 'use strict';
 
 module.exports = evalFilter;
@@ -16459,7 +16496,7 @@ function evalFilter(input) {
     ' })()'
   ].join(''));
 }
-},{}],76:[function(require,module,exports){
+},{}],42:[function(require,module,exports){
 'use strict';
 
 module.exports = evalView;
@@ -16481,7 +16518,7 @@ function evalView(input) {
     '})()'
   ].join('\n'));
 }
-},{}],77:[function(require,module,exports){
+},{}],43:[function(require,module,exports){
 (function (process){
 "use strict";
 
@@ -16511,7 +16548,7 @@ if (!process.browser) {
 }
 
 }).call(this,require('_process'))
-},{"./adapters/http/http":53,"./adapters/idb/idb":57,"./adapters/leveldb/leveldb":45,"./adapters/websql/websql":62,"./deps/ajax":66,"./deps/errors":69,"./replicate":79,"./setup":80,"./sync":81,"./utils":83,"./version":84,"_process":51,"pouchdb-extend":107,"pouchdb-mapreduce":110}],78:[function(require,module,exports){
+},{"./adapters/http/http":19,"./adapters/idb/idb":23,"./adapters/leveldb/leveldb":11,"./adapters/websql/websql":28,"./deps/ajax":32,"./deps/errors":35,"./replicate":45,"./setup":46,"./sync":47,"./utils":49,"./version":50,"_process":17,"pouchdb-extend":73,"pouchdb-mapreduce":76}],44:[function(require,module,exports){
 'use strict';
 var extend = require('pouchdb-extend');
 
@@ -16813,7 +16850,7 @@ PouchMerge.rootToLeaf = function (tree) {
 
 module.exports = PouchMerge;
 
-},{"pouchdb-extend":107}],79:[function(require,module,exports){
+},{"pouchdb-extend":73}],45:[function(require,module,exports){
 'use strict';
 
 var utils = require('./utils');
@@ -17412,7 +17449,7 @@ function replicateWrapper(src, target, opts, callback) {
   return replicateRet;
 }
 
-},{"./checkpointer":64,"./utils":83,"events":50}],80:[function(require,module,exports){
+},{"./checkpointer":30,"./utils":49,"events":16}],46:[function(require,module,exports){
 "use strict";
 
 var PouchDB = require("./constructor");
@@ -17610,7 +17647,7 @@ PouchDB.defaults = function (defaultOpts) {
 
 module.exports = PouchDB;
 
-},{"./adapters/preferredAdapters.js":58,"./constructor":65,"./utils":83,"events":50}],81:[function(require,module,exports){
+},{"./adapters/preferredAdapters.js":24,"./constructor":31,"./utils":49,"events":16}],47:[function(require,module,exports){
 'use strict';
 var utils = require('./utils');
 var replication = require('./replicate');
@@ -17789,7 +17826,7 @@ Sync.prototype.cancel = function () {
   }
 };
 
-},{"./replicate":79,"./utils":83,"events":50}],82:[function(require,module,exports){
+},{"./replicate":45,"./utils":49,"events":16}],48:[function(require,module,exports){
 'use strict';
 
 module.exports = TaskQueue;
@@ -17859,7 +17896,7 @@ TaskQueue.prototype.addTask = function (name, parameters) {
   }
 };
 
-},{}],83:[function(require,module,exports){
+},{}],49:[function(require,module,exports){
 (function (process,global){
 /*jshint strict: false */
 /*global chrome */
@@ -18811,10 +18848,10 @@ exports.safeJsonStringify = function safeJsonStringify(json) {
 };
 
 }).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./deps/ajax":66,"./deps/blob":67,"./deps/buffer":45,"./deps/collections":68,"./deps/errors":69,"./deps/md5":70,"./deps/parse-uri":72,"./deps/uuid":74,"./merge":78,"_process":51,"argsarray":85,"bluebird":90,"debug":42,"events":50,"inherits":86,"pouchdb-extend":107,"vuvuzela":115}],84:[function(require,module,exports){
+},{"./deps/ajax":32,"./deps/blob":33,"./deps/buffer":11,"./deps/collections":34,"./deps/errors":35,"./deps/md5":36,"./deps/parse-uri":38,"./deps/uuid":40,"./merge":44,"_process":17,"argsarray":51,"bluebird":56,"debug":8,"events":16,"inherits":52,"pouchdb-extend":73,"vuvuzela":81}],50:[function(require,module,exports){
 module.exports = "3.2.1";
 
-},{}],85:[function(require,module,exports){
+},{}],51:[function(require,module,exports){
 'use strict';
 
 module.exports = argsArray;
@@ -18834,7 +18871,7 @@ function argsArray(fun) {
     }
   };
 }
-},{}],86:[function(require,module,exports){
+},{}],52:[function(require,module,exports){
 if (typeof Object.create === 'function') {
   // implementation from standard node.js 'util' module
   module.exports = function inherits(ctor, superCtor) {
@@ -18859,13 +18896,13 @@ if (typeof Object.create === 'function') {
   }
 }
 
-},{}],87:[function(require,module,exports){
+},{}],53:[function(require,module,exports){
 'use strict';
 
 module.exports = INTERNAL;
 
 function INTERNAL() {}
-},{}],88:[function(require,module,exports){
+},{}],54:[function(require,module,exports){
 'use strict';
 var Promise = require('./promise');
 var reject = require('./reject');
@@ -18909,7 +18946,7 @@ function all(iterable) {
     }
   }
 }
-},{"./INTERNAL":87,"./handlers":89,"./promise":91,"./reject":94,"./resolve":95}],89:[function(require,module,exports){
+},{"./INTERNAL":53,"./handlers":55,"./promise":57,"./reject":60,"./resolve":61}],55:[function(require,module,exports){
 'use strict';
 var tryCatch = require('./tryCatch');
 var resolveThenable = require('./resolveThenable');
@@ -18955,14 +18992,14 @@ function getThen(obj) {
     };
   }
 }
-},{"./resolveThenable":96,"./states":97,"./tryCatch":98}],90:[function(require,module,exports){
+},{"./resolveThenable":62,"./states":63,"./tryCatch":64}],56:[function(require,module,exports){
 module.exports = exports = require('./promise');
 
 exports.resolve = require('./resolve');
 exports.reject = require('./reject');
 exports.all = require('./all');
 exports.race = require('./race');
-},{"./all":88,"./promise":91,"./race":93,"./reject":94,"./resolve":95}],91:[function(require,module,exports){
+},{"./all":54,"./promise":57,"./race":59,"./reject":60,"./resolve":61}],57:[function(require,module,exports){
 'use strict';
 
 var unwrap = require('./unwrap');
@@ -19008,7 +19045,7 @@ Promise.prototype.then = function (onFulfilled, onRejected) {
   return promise;
 };
 
-},{"./INTERNAL":87,"./queueItem":92,"./resolveThenable":96,"./states":97,"./unwrap":99}],92:[function(require,module,exports){
+},{"./INTERNAL":53,"./queueItem":58,"./resolveThenable":62,"./states":63,"./unwrap":65}],58:[function(require,module,exports){
 'use strict';
 var handlers = require('./handlers');
 var unwrap = require('./unwrap');
@@ -19037,7 +19074,7 @@ QueueItem.prototype.callRejected = function (value) {
 QueueItem.prototype.otherCallRejected = function (value) {
   unwrap(this.promise, this.onRejected, value);
 };
-},{"./handlers":89,"./unwrap":99}],93:[function(require,module,exports){
+},{"./handlers":55,"./unwrap":65}],59:[function(require,module,exports){
 'use strict';
 var Promise = require('./promise');
 var reject = require('./reject');
@@ -19078,7 +19115,7 @@ function race(iterable) {
     });
   }
 }
-},{"./INTERNAL":87,"./handlers":89,"./promise":91,"./reject":94,"./resolve":95}],94:[function(require,module,exports){
+},{"./INTERNAL":53,"./handlers":55,"./promise":57,"./reject":60,"./resolve":61}],60:[function(require,module,exports){
 'use strict';
 
 var Promise = require('./promise');
@@ -19090,7 +19127,7 @@ function reject(reason) {
 	var promise = new Promise(INTERNAL);
 	return handlers.reject(promise, reason);
 }
-},{"./INTERNAL":87,"./handlers":89,"./promise":91}],95:[function(require,module,exports){
+},{"./INTERNAL":53,"./handlers":55,"./promise":57}],61:[function(require,module,exports){
 'use strict';
 
 var Promise = require('./promise');
@@ -19125,7 +19162,7 @@ function resolve(value) {
       return EMPTYSTRING;
   }
 }
-},{"./INTERNAL":87,"./handlers":89,"./promise":91}],96:[function(require,module,exports){
+},{"./INTERNAL":53,"./handlers":55,"./promise":57}],62:[function(require,module,exports){
 'use strict';
 var handlers = require('./handlers');
 var tryCatch = require('./tryCatch');
@@ -19158,13 +19195,13 @@ function safelyResolveThenable(self, thenable) {
   }
 }
 exports.safely = safelyResolveThenable;
-},{"./handlers":89,"./tryCatch":98}],97:[function(require,module,exports){
+},{"./handlers":55,"./tryCatch":64}],63:[function(require,module,exports){
 // Lazy man's symbols for states
 
 exports.REJECTED = ['REJECTED'];
 exports.FULFILLED = ['FULFILLED'];
 exports.PENDING = ['PENDING'];
-},{}],98:[function(require,module,exports){
+},{}],64:[function(require,module,exports){
 'use strict';
 
 module.exports = tryCatch;
@@ -19180,7 +19217,7 @@ function tryCatch(func, value) {
   }
   return out;
 }
-},{}],99:[function(require,module,exports){
+},{}],65:[function(require,module,exports){
 'use strict';
 
 var immediate = require('immediate');
@@ -19202,7 +19239,7 @@ function unwrap(promise, func, value) {
     }
   });
 }
-},{"./handlers":89,"immediate":100}],100:[function(require,module,exports){
+},{"./handlers":55,"immediate":66}],66:[function(require,module,exports){
 'use strict';
 var types = [
   require('./nextTick'),
@@ -19244,7 +19281,7 @@ function immediate(task) {
     scheduleDrain();
   }
 }
-},{"./messageChannel":101,"./mutation.js":102,"./nextTick":45,"./stateChange":103,"./timeout":104}],101:[function(require,module,exports){
+},{"./messageChannel":67,"./mutation.js":68,"./nextTick":11,"./stateChange":69,"./timeout":70}],67:[function(require,module,exports){
 (function (global){
 'use strict';
 
@@ -19265,7 +19302,7 @@ exports.install = function (func) {
   };
 };
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],102:[function(require,module,exports){
+},{}],68:[function(require,module,exports){
 (function (global){
 'use strict';
 //based off rsvp https://github.com/tildeio/rsvp.js
@@ -19290,7 +19327,7 @@ exports.install = function (handle) {
   };
 };
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],103:[function(require,module,exports){
+},{}],69:[function(require,module,exports){
 (function (global){
 'use strict';
 
@@ -19317,7 +19354,7 @@ exports.install = function (handle) {
   };
 };
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],104:[function(require,module,exports){
+},{}],70:[function(require,module,exports){
 'use strict';
 exports.test = function () {
   return true;
@@ -19328,7 +19365,7 @@ exports.install = function (t) {
     setTimeout(t, 0);
   };
 };
-},{}],105:[function(require,module,exports){
+},{}],71:[function(require,module,exports){
 'use strict';
 
 var MIN_MAGNITUDE = -324; // verified by -Number.MIN_VALUE
@@ -19683,7 +19720,7 @@ function numToIndexableString(num) {
   return result;
 }
 
-},{"./utils":106}],106:[function(require,module,exports){
+},{"./utils":72}],72:[function(require,module,exports){
 'use strict';
 
 function pad(str, padWith, upToLength) {
@@ -19754,7 +19791,7 @@ exports.intToDecimalForm = function (int) {
 
   return result;
 };
-},{}],107:[function(require,module,exports){
+},{}],73:[function(require,module,exports){
 "use strict";
 
 // Extends method
@@ -19935,7 +19972,7 @@ module.exports = extend;
 
 
 
-},{}],108:[function(require,module,exports){
+},{}],74:[function(require,module,exports){
 'use strict';
 
 var upsert = require('./upsert');
@@ -20014,7 +20051,7 @@ module.exports = function (opts) {
   });
 };
 
-},{"./upsert":112,"./utils":113}],109:[function(require,module,exports){
+},{"./upsert":78,"./utils":79}],75:[function(require,module,exports){
 'use strict';
 
 module.exports = function (func, emit, sum, log, isArray, toJSON) {
@@ -20022,7 +20059,7 @@ module.exports = function (func, emit, sum, log, isArray, toJSON) {
   return eval("'use strict'; (" + func.replace(/;\s*$/, "") + ");");
 };
 
-},{}],110:[function(require,module,exports){
+},{}],76:[function(require,module,exports){
 (function (process){
 'use strict';
 
@@ -20825,7 +20862,7 @@ function NotFoundError(message) {
 utils.inherits(NotFoundError, Error);
 
 }).call(this,require('_process'))
-},{"./create-view":108,"./evalfunc":109,"./taskqueue":111,"./utils":113,"_process":51,"pouchdb-collate":105}],111:[function(require,module,exports){
+},{"./create-view":74,"./evalfunc":75,"./taskqueue":77,"./utils":79,"_process":17,"pouchdb-collate":71}],77:[function(require,module,exports){
 'use strict';
 /*
  * Simple task queue to sequentialize actions. Assumes callbacks will eventually fire (once).
@@ -20850,7 +20887,7 @@ TaskQueue.prototype.finish = function () {
 
 module.exports = TaskQueue;
 
-},{"./utils":113}],112:[function(require,module,exports){
+},{"./utils":79}],78:[function(require,module,exports){
 'use strict';
 var Promise = require('./utils').Promise;
 
@@ -20893,7 +20930,7 @@ function tryAndPut(db, doc, diffFun) {
 
 module.exports = upsert;
 
-},{"./utils":113}],113:[function(require,module,exports){
+},{"./utils":79}],79:[function(require,module,exports){
 (function (process,global){
 'use strict';
 /* istanbul ignore if */
@@ -20994,7 +21031,7 @@ exports.MD5 = function (string) {
   }
 };
 }).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"_process":51,"argsarray":85,"crypto":45,"inherits":86,"lie":90,"pouchdb-extend":107,"spark-md5":114}],114:[function(require,module,exports){
+},{"_process":17,"argsarray":51,"crypto":11,"inherits":52,"lie":56,"pouchdb-extend":73,"spark-md5":80}],80:[function(require,module,exports){
 /*jshint bitwise:false*/
 /*global unescape*/
 
@@ -21595,7 +21632,7 @@ exports.MD5 = function (string) {
     return SparkMD5;
 }));
 
-},{}],115:[function(require,module,exports){
+},{}],81:[function(require,module,exports){
 'use strict';
 
 /**
@@ -21770,7 +21807,7 @@ exports.parse = function (str) {
   }
 };
 
-},{}],116:[function(require,module,exports){
+},{}],82:[function(require,module,exports){
 (function(window) {
     var re = {
         not_string: /[^s]/,
@@ -21967,7 +22004,7 @@ exports.parse = function (str) {
     }
 })(typeof window === "undefined" ? this : window);
 
-},{}],117:[function(require,module,exports){
+},{}],83:[function(require,module,exports){
 //     Underscore.js 1.7.0
 //     http://underscorejs.org
 //     (c) 2009-2014 Jeremy Ashkenas, DocumentCloud and Investigative Reporters & Editors
