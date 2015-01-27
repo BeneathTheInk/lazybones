@@ -22,12 +22,14 @@
 		"test": "grunt build-test && ./node_modules/.bin/mocha test",
 		"build-docs": "./node_modules/.bin/doxxo -i README.md README.md lib/"
 	},
-	"main": "lib/lazybones.js",
+	"main": "lib/index.js",
 	"dependencies": {
 		"backbone": "~1.1.2",
+		"backbone-symlink": "~0.2.4",
 		"bluebird": "~2.8.1",
 		"debug": "~2.1.1",
 		"pouchdb": "~3.2.1",
+		"sprintf-js": "~1.0.2",
 		"underscore": "~1.7.0"
 	},
 	"devDependencies": {

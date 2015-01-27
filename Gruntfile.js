@@ -5,14 +5,14 @@ module.exports = function(grunt) {
 		clean: [ "dist/*.js" ],
 		browserify: {
 			dist: {
-				src: "lib/lazybones.js",
+				src: "lib/index.js",
 				dest: "dist/lazybones.js",
 				options: {
 					browserifyOptions: { standalone: "Lazybones" }
 				}
 			},
 			dev: {
-				src: "lib/lazybones.js",
+				src: "lib/index.js",
 				dest: "dist/lazybones.dev.js",
 				options: {
 					browserifyOptions: { debug: true, standalone: "Lazybones" }
