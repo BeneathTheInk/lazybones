@@ -10,9 +10,6 @@
 			"url": "http://github.com/tyler-johnson"
 		}
 	],
-	"publishConfig": {
-		"registry": "http://registry.npmjs.org"
-	},
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/BeneathTheInk/lazybones.git"
@@ -24,13 +21,9 @@
 	},
 	"main": "lib/lazybones.js",
 	"dependencies": {
-		"backbone": "~1.1.2",
-		"backbone-symlink": "~0.2.5",
-		"bluebird": "~2.9.3",
-		"debug": "~2.1.1",
-		"pouchdb": "~3.2.1",
-		"sprintf-js": "~1.0.2",
-		"underscore": "~1.7.0"
+		"backbone": "^1.2.0",
+		"pouchdb": "^3.5.0",
+		"underscore": "^1.8.3"
 	},
 	"devDependencies": {
 		"chai": "~1.10.0",
