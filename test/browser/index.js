@@ -1,9 +1,20 @@
-var http = require("http"),
+var _ = require("underscore"),
+	http = require("http"),
 	fs = require("fs"),
 	path = require("path"),
 	grunt = require("grunt");
 
-var argv = require('minimist')(process.argv.slice(2));
+var pkg = require("../../package.json");
+var argv = require('minimist')(process.argv.slice(2), {
+	string: [ "port" ]
+});
+
+_.defaults(argv, require("./config.json"), {
+	port: "8000",
+	"build-task": "test"
+});
+
+var tpl = _.template(fs.readFileSync(resolve("test/browser/test.html"), "utf-8"), { variable: "$" });
 
 function resolve(p) {
 	return path.resolve(__dirname, "../..", p);
@@ -13,7 +24,7 @@ var mimes = {
 	".js": "application/javascript",
 	".css": "text/css",
 	".html": "text/html"
-}
+};
 
 var server = http.createServer(function(req, res) {
 	res.statusCode = 200;
@@ -26,32 +37,36 @@ var server = http.createServer(function(req, res) {
 	fs.stat(fpath, function(err, stat) {
 		if (stat && stat.isFile()) {
 			mime = mimes[path.extname(fpath)];
-		} else if (req.url.substr(0, 10) === "/lazybones") {
-			mime = mimes[path.extname(fpath)];
-			fpath = resolve(".." + req.url);
-		} else {
-			mime = mimes[".html"];
-			fpath = resolve("test/browser/test.html");
+			res.setHeader("Content-Type", mime);
+			fs.createReadStream(fpath, { encoding: "utf-8" }).pipe(res);
+			return;
 		}
 
-		res.setHeader("Content-Type", mime);
-		fs.createReadStream(fpath, "utf-8").pipe(res);
+		if (argv["bundle-path"]) {
+			var html = tpl(_.extend({}, pkg, argv, { bundle: argv["bundle-path"] }));
+			res.setHeader("Content-Type", "html");
+			res.setHeader("Content-Length", html.length);
+			res.end(html, "utf-8");
+			return;
+		}
+
+		res.statusCode = 404;
+		res.end();
 	});
 });
 
-var port = argv.port || 8000;
-var options = { debug: argv.debug };
+var gruntOptions = { debug: argv.debug };
 
-grunt.tasks([ "build-test" ], options, function(err) {
+grunt.tasks([ argv["build-task"] ], gruntOptions, function(err) {
 	if (err) {
 		console.error(err.stack || err.toString());
 		return process.exit(1);
 	}
 
-	server.listen(port, function() {
-		grunt.log.ok("Test server listening on port " + port + ".");
+	server.listen(argv.port, function() {
+		grunt.log.ok("Test server listening on port " + argv.port + ".");
 
-		grunt.tasks([ "watch:test" ], options, function(err) {
+		if (argv["watch-task"]) grunt.tasks([ argv["watch-task"] ], gruntOptions, function(err) {
 			if (err) {
 				console.error(err.stack || err.toString());
 				return process.exit(1);

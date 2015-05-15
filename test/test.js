@@ -1,65 +1,22 @@
-require("bluebird").longStackTraces();
-
 var Lazybones = require("../"),
+	Backbone = require("backbone"),
 	PouchDB = require("pouchdb"),
 	expect = require("chai").expect;
 
-describe("Documents", function() {
-	
-	it("creates document model with a new id", function() {
-		var doc = new Lazybones.Document({ foo: "bar" });
-		expect(doc.id).to.be.ok;
-		expect(doc.get("foo")).to.equal("bar");
-	});
-
-	it("documents without a revision id are considered new", function() {
-		var doc = new Lazybones.Document();
-		expect(doc.isNew()).to.be.ok;
-	});
-
-	it("documents with a revision id are not considered new", function() {
-		var doc = new Lazybones.Document({ _rev: "1" });
-		expect(doc.isNew()).to.not.be.ok;
-	});
-
-	it("can create subclass from Document class", function() {
-		var subclass = Lazybones.Document.extend({ foo: function() {} });
-		expect(subclass.prototype.foo).to.be.a.function;
-		expect(subclass.prototype.get).to.be.a.function;
-	});
-
-});
-
-describe("Database", function() {
-
-	it("creates and destroys a database instance", function(done) {
-		var db = new Lazybones("testdb");
-		db.destroy().nodeify(done);
-	});
-
-	it("throws error if PouchDB instance is missing", function() {
-		expect(function() {
-			new Lazybones();
-		}).to.throw(Lazybones.utils.LazyError, /INVALID_POUCH/);
-	});
-
-	it("can create subclass from Database class", function() {
-		var subclass = Lazybones.extend({ foo: function() {} });
-		expect(subclass.prototype.foo).to.be.a.function;
-		expect(subclass.prototype.get).to.be.a.function;
-	});
-
-});
+PouchDB.plugin(Lazybones());
 
 describe("CRUD", function() {
-	var db, pouch;
+	var col, pouch;
 
 	this.slow(1000);
 	this.timeout(5000);
 
 	beforeEach(function() {
 		pouch = new PouchDB("testdb");
-		db = new Lazybones(pouch);
+		var sync = pouch.lazybones();
+		col = new Backbone.Collection(null);
+		col.model = Backbone.Model.extend({ sync: sync });
+		col.sync = sync;
 	});
 
 	afterEach(function(done) {
@@ -67,7 +24,7 @@ describe("CRUD", function() {
 	});
 
 	it("creates a document", function(done) {
-		var model = db.add({ foo: "bar" });
+		var model = col.add({ foo: "bar" });
 
 		model.save().then(function(res) {
 			expect(this).to.equal(model);
@@ -84,7 +41,7 @@ describe("CRUD", function() {
 	});
 
 	it("deletes a document", function(done) {
-		var model = db.add({ foo: "bar" });
+		var model = col.add({ foo: "bar" });
 
 		model.save().then(function() {
 			return model.destroy();
@@ -92,7 +49,7 @@ describe("CRUD", function() {
 
 		.then(function(res) {
 			expect(res.ok).to.be.ok;
-			expect(db.contains(model)).to.not.be.ok;
+			expect(col.contains(model)).to.not.be.ok;
 			return pouch.get(model.id).then(function() {
 				throw new Error("Document was not deleted from database.");
 			}, function(e) {
@@ -105,7 +62,7 @@ describe("CRUD", function() {
 	});
 
 	it("updates a document", function(done) {
-		var model = db.add({ foo: "bar" });
+		var model = col.add({ foo: "bar" });
 
 		model.save().then(function() {
 			return model.set({ foo: true, bam: "baz" }).save();
@@ -130,12 +87,12 @@ describe("CRUD", function() {
 			{ _id: "b" },
 			{ _id: "c" }
 		]).then(function() {
-			return db.fetch();
+			return col.fetch();
 		})
 
 		.then(function() {
-			expect(db.length).to.equal(3);
-			expect(db.pluck("_id").sort()).to.deep.equal([ "a", "b", "c" ]);
+			expect(col.length).to.equal(3);
+			expect(col.pluck("_id").sort()).to.deep.equal([ "a", "b", "c" ]);
 			done();
 		})
 
@@ -143,7 +100,7 @@ describe("CRUD", function() {
 	});
 
 	it("reads a document", function(done) {
-		var model = db.add({ foo: "bar" }),
+		var model = col.add({ foo: "bar" }),
 			docid = model.id;
 
 		model.save().then(function(res) {

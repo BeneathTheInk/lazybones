@@ -70,18 +70,14 @@ module.exports = function(grunt) {
 	grunt.loadNpmTasks('grunt-contrib-uglify');
 	grunt.loadNpmTasks('grunt-wrap2000');
 
-	grunt.registerTask('compile-dev', [ 'browserify:dev', 'wrap2000:dev' ]);
-	grunt.registerTask('compile-test', [ 'browserify:test', 'wrap2000:test' ]);
-	grunt.registerTask('compile-dist', [ 'browserify:dist', 'wrap2000:dist', 'uglify:dist' ]);
+	grunt.registerTask('build-dev', [ 'browserify:dev', 'wrap2000:dev' ]);
+	grunt.registerTask('build-test', [ 'browserify:test', 'wrap2000:test' ]);
+	grunt.registerTask('build-dist', [ 'browserify:dist', 'wrap2000:dist', 'uglify:dist' ]);
 
-	grunt.registerTask('build-dev', [ 'clean', 'compile-dev' ]);
-	grunt.registerTask('build-test', [ 'clean', 'compile-test' ]);
-	grunt.registerTask('build-dist', [ 'clean', 'compile-dist' ]);
+	grunt.registerTask('dev', [ 'clean', 'build-dev' ]);
+	grunt.registerTask('test', [ 'clean', 'build-test' ]);
+	grunt.registerTask('dist', [ 'clean', 'build-dist'  ]);
 
-	grunt.registerTask('dev', [ 'build-dev' ]);
-	grunt.registerTask('test', [ 'build-test', 'watch:test' ]);
-	grunt.registerTask('dist', [ 'build-dist'  ]);
-
-	grunt.registerTask('default', [ 'clean', 'compile-dist', 'compile-dev' ]);
+	grunt.registerTask('default', [ 'clean', 'build-dist', 'build-dev' ]);
 
 }
