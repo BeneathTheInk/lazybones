@@ -15,7 +15,7 @@ describe("CRUD", function() {
 		pouch = new PouchDB("testdb");
 		var sync = pouch.lazybones();
 		col = new Backbone.Collection(null);
-		col.model = Backbone.Model.extend({ sync: sync });
+		col.model = Backbone.Model.extend({ sync: sync, idAttribute: "_id" });
 		col.sync = sync;
 	});
 
@@ -27,7 +27,6 @@ describe("CRUD", function() {
 		var model = col.add({ foo: "bar" });
 
 		model.save().then(function(res) {
-			expect(this).to.equal(model);
 			expect(res.ok).to.be.ok;
 			return pouch.get(model.id);
 		})
@@ -86,7 +85,11 @@ describe("CRUD", function() {
 			{ _id: "a" },
 			{ _id: "b" },
 			{ _id: "c" }
-		]).then(function() {
+		]).then(function(res) {
+			expect(res.length).to.equal(3);
+			expect(res[0].ok).to.be.ok;
+			expect(res[1].ok).to.be.ok;
+			expect(res[2].ok).to.be.ok;
 			return col.fetch();
 		})
 
@@ -100,22 +103,19 @@ describe("CRUD", function() {
 	});
 
 	it("reads a document", function(done) {
-		var model = col.add({ foo: "bar" }),
-			docid = model.id;
+		var model = col.add({ _id: "testmodel" });
 
-		model.save().then(function(res) {
-			return pouch.put({
-				_id: docid,
-				_rev: res.rev,
-				foo: "baz"
-			});
-		}).then(function() {
+		return pouch.put({
+			_id: "testmodel",
+			foo: "bar"
+		}).then(function(res) {
+			expect(res.ok).to.be.ok;
 			return model.fetch();
 		})
 
 		.then(function() {
-			expect(model.get("foo")).to.equal("baz");
-			expect(model.get("_rev").substr(0, 1)).to.equal("2");
+			expect(model.get("foo")).to.equal("bar");
+			expect(model.get("_rev").substr(0, 1)).to.equal("1");
 			done();
 		})
 
