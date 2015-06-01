@@ -22,21 +22,21 @@
 	"main": "lib/lazybones.js",
 	"dependencies": {
 		"plain-merge": "~1.0.1",
-		"pouchdb": "~3.5.0"
+		"pouchdb": "~3.6.0"
 	},
 	"devDependencies": {
 		"backbone": "~1.2.0",
-		"chai": "~1.10.0",
+		"chai": "~2.3.0",
 		"doxxo": "~0.2.2",
 		"grunt": "~0.4.5",
-		"grunt-browserify": "~3.3.0",
+		"grunt-browserify": "~3.8.0",
 		"grunt-contrib-clean": "~0.6.0",
-		"grunt-contrib-uglify": "~0.7.0",
+		"grunt-contrib-uglify": "~0.9.1",
 		"grunt-contrib-watch": "~0.6.1",
 		"grunt-wrap2000": "~0.1.0",
 		"jquery": "~2.1.4",
 		"minimist": "~1.1.1",
-		"mocha": "~2.1.0",
+		"mocha": "~2.2.5",
 		"underscore": "~1.8.3"
 	},
 	"license": "MIT",
