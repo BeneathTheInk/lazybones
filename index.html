@@ -25,23 +25,8 @@
                 </a>
               
                 
-                <a class="source" href="document.html">
-                  document.js
-                </a>
-              
-                
                 <a class="source" href="lazybones.html">
                   lazybones.js
-                </a>
-              
-                
-                <a class="source" href="sync.html">
-                  sync.js
-                </a>
-              
-                
-                <a class="source" href="utils.html">
-                  utils.js
                 </a>
               
             </div>
@@ -60,30 +45,40 @@
                 <a class="pilcrow" href="#section-1">&#182;</a>
               </div>
               <h1>Lazybones</h1>
-<p>Lazybones is a modified Backbone collection that integrates with PouchDB. By combining Backbone&#39;s object-oriented approach with PouchDB&#39;s super flexible databases, Lazybones provides a highly-functional API for storing and manipulating data in the browser and Node.js.</p><h2>Install</h2>
+<p>A custom Backbone sync method for PouchDB, with support for views and changes. This is very similar to <a href="https://github.com/jo/backbone-pouch">backbone-pouch</a> but is slightly more dynamic and up-to-date for the latest PouchDB API.</p><h2>Install</h2>
 <p>Download the latest version from our <a href="https://github.com/BeneathTheInk/lazybones/releases">release page</a> and use via a script tag. The variable <code>Lazybones</code> will be attached to <code>window</code>.</p><pre><code class="lang-html"><span class="hljs-tag">&lt;<span class="hljs-title">script</span> <span class="hljs-attribute">type</span>=<span class="hljs-value">"text/javascript"</span> <span class="hljs-attribute">src</span>=<span class="hljs-value">"lazybones.js"</span>&gt;</span><span class="javascript"></span><span class="hljs-tag">&lt;/<span class="hljs-title">script</span>&gt;</span>
 </code></pre>
 <p>If using Browserify or Node.js, you can install via NPM and use via <code>require(&quot;lazybones&quot;)</code>.</p><pre><code class="lang-shell">$ npm install lazybones
 </code></pre>
 <h2>Basic Usage</h2>
-<p>Lazybones is a modified Backbone collection with a custom sync function that allows for fetching and writing to a Pouch database. To begin using Lazybones, you only need the name of the database you are using:</p><pre><code class="lang-javascript"><span class="hljs-keyword">var</span> db = <span class="hljs-keyword">new</span> Lazybones(<span class="hljs-string">"mydb"</span>);
-</code></pre>
-<p>This will return an empty backbone collection attached to a newly initiated PouchDB instance. This instance if available via <code>db.pouch</code> although you should rarely need access to it.</p><p>At this point you can load in documents from the database into memory. The easiest way to do this is via a normal fetch:</p><pre><code class="lang-javascript">db.fetch().then(<span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> </span>{
-   <span class="hljs-comment">// collection now contains everything in PouchDB</span>
-});
-</code></pre>
-<p>Using fetch, you can also retrieve specific subsets of documents, for example only those in a specific CouchDB view. Just add <code>query: &quot;myview&quot;</code> to fetch options. All the other standard Backbone sync options are available too.</p><p>Lazybones also provides a method for continuously listening to changes in the database and replicating them to the in-memory documents:</p><pre><code class="lang-javascript">db.connect();
+<h3>Method 1: PouchDB Plugin</h3>
+<p>If you want to generate a sync function with the Pouch database already attached, use the built in plugin interface. <code>db.lazybones()</code> will produce a sync function that uses <code>db</code> to fetch data.</p><pre><code class="lang-js">PouchDB.plugin(Lazybones({
+    <span class="hljs-comment">// global options</span>
+}));
 
 <span class="hljs-comment">// later</span>
-db.disconnect();
+<span class="hljs-keyword">var</span> db = <span class="hljs-keyword">new</span> PouchDB(<span class="hljs-string">"mydb"</span>);
+Backbone.Model.extend({
+    sync: db.lazybones()
+});
 </code></pre>
-<p>When <code>.connect()</code> is called, the database will listen to the database changes feed and automatically push changes to documents in the collection. This means that <code>connect</code>, in a lot of ways, is like fetch with the exception that it continually updates the documents.</p><h2>Documentation</h2>
+<h3>Method 2: Generic sync</h3>
+<p>The simplest method is to use the raw sync method directly. You will need to reference the Pouch database through the model.</p><pre><code class="lang-js"><span class="hljs-keyword">var</span> db = <span class="hljs-keyword">new</span> PouchDB(<span class="hljs-string">"mydb"</span>);
+Backbone.Model.extend({
+    sync: Lazybones.sync,
+    pouchdb: db,
+    syncOptions: {
+        <span class="hljs-comment">// options specific to this model</span>
+    }
+});
+</code></pre>
+<h2>Documentation</h2>
 <p>We have <a href="http://beneaththeink.github.io/lazybones/lazybones.html">pretty HTML docs</a> with inline source code hosted on Github Pages. This documentation is generated from block-level comments in the code using <a href="https://github.com/BeneathTheInk/doxxo">Doxxo</a>, so you can also build them locally.</p><pre><code class="lang-bash">npm run build-docs
 </code></pre>
 <h2>How to Build from Scratch</h2>
-<p>Lazybones uses Grunt to build a Browserify bundle from the original source found in <code>lib/</code>. When the command below completes, the compiled source will be saved to <code>dist/</code> directory.</p><pre><code class="lang-bash">npm install &amp;&amp; grunt
+<p>Lazybones uses Grunt to build a Browserify bundle from the original source found in <code>lib/</code>. When the command below completes, the compiled source will be saved to <code>dist/</code> directory.</p><pre><code class="lang-bash">npm install &amp;&amp; npm run build-js
 </code></pre>
-<p>If you don&#39;t the Grunt cli tools installed globally, run <code>npm install -g grunt-cli</code> before running that command.</p><h2>Running the Unit Tests</h2>
+<h2>Running the Unit Tests</h2>
 <p>Lazybones has several unit tests written for Node.js and the browser. Before running tests, install all test dependencies:</p><pre><code>npm install
 </code></pre><p>To get tests running on Node.js, run:</p><pre><code>npm test
 </code></pre><p>To run tests in the browser, start a test server with this command. When the server is running, navigate your browser to <a href="http://localhost:8000">http://localhost:8000</a>.</p><pre><code>npm run dev

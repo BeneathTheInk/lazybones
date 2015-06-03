@@ -25,23 +25,8 @@
                 </a>
               
                 
-                <a class="source" href="document.html">
-                  document.js
-                </a>
-              
-                
                 <a class="source" href="lazybones.html">
                   lazybones.js
-                </a>
-              
-                
-                <a class="source" href="sync.html">
-                  sync.js
-                </a>
-              
-                
-                <a class="source" href="utils.html">
-                  utils.js
                 </a>
               
             </div>
@@ -60,17 +45,14 @@
                 <a class="pilcrow" href="#section-1">&#182;</a>
               </div>
               <h1>Lazybones</h1>
-<p>Lazybones is a modified Backbone collection that integrates with PouchDB. By combining Backbone&#39;s object-oriented approach with PouchDB&#39;s super flexible databases, Lazybones provides a highly-functional API for storing and manipulating data in the browser and Node.js.</p><p>A deeper understanding of <a href="http://backbonejs.org">Backbone</a> is recommended since many of Lazybones methods and concepts are inherited directly from Backbone. Knowledge of PouchDB&#39;s API is also recommended, but not required to use Lazybones.</p>
+
             </div>
             
-            <div class="content"><div class='highlight'><pre><span class="hljs-keyword">var</span> _ = <span class="hljs-built_in">require</span>(<span class="hljs-string">"underscore"</span>),
-    Backbone = <span class="hljs-built_in">require</span>(<span class="hljs-string">"backbone"</span>),
-    PouchDB = <span class="hljs-built_in">require</span>(<span class="hljs-string">"pouchdb"</span>),
-    Promise = <span class="hljs-built_in">require</span>(<span class="hljs-string">"bluebird"</span>);
+            <div class="content"><div class='highlight'><pre><span class="hljs-keyword">var</span> merge = <span class="hljs-built_in">require</span>(<span class="hljs-string">"plain-merge"</span>),
+    Promise = <span class="hljs-built_in">require</span>(<span class="hljs-string">"pouchdb/extras/promise"</span>),
+    PouchError = <span class="hljs-built_in">require</span>(<span class="hljs-string">"pouchdb/lib/deps/errors"</span>);
 
-<span class="hljs-keyword">var</span> utils = <span class="hljs-built_in">require</span>(<span class="hljs-string">"./utils"</span>),
-    Document = <span class="hljs-built_in">require</span>(<span class="hljs-string">"./document"</span>),
-    sync = <span class="hljs-built_in">require</span>(<span class="hljs-string">"./sync"</span>);</pre></div></div>
+<span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">noop</span><span class="hljs-params">()</span></span>{}</pre></div></div>
             
         </li>
         
@@ -81,45 +63,30 @@
               <div class="pilwrap for-h2">
                 <a class="pilcrow" href="#section-2">&#182;</a>
               </div>
-              <h2>Constructor</h2>
-<p>To use Lazybones, create a new database instance with a name or PouchDB instance:</p><pre><code class="lang-javascript"><span class="hljs-keyword">var</span> db = <span class="hljs-keyword">new</span> Lazybones(<span class="hljs-string">"testdb"</span>);
+              <h2>PouchDB Plugin</h2>
+<p>This is the PouchDB plugin method that attaches a <code>lazybones()</code> method to newly created PouchDB instances. The <code>lazybones()</code> will create a sync method (with options) that is tied directly the database it was called on.</p><pre><code class="lang-js">PouchDB.plugin(Lazybones());
+<span class="hljs-keyword">var</span> db = <span class="hljs-keyword">new</span> PouchDB(<span class="hljs-string">"mydb"</span>);
+db.lazybones(); <span class="hljs-comment">// returns a sync function</span>
 </code></pre>
-<p>Databases are always created with an associated PouchDB instance. If PouchDB needs to be specially initialized, instances can be created ahead of time and passed in via <code>options.pouch</code>. Otherwise, the Lazybones constructor will create a new PouchDB instance from the <code>name</code> argument.</p><h4>Arguments</h4>
-<ul>
-<li><strong>name</strong> <em>PouchDB | string</em>  - A PouchDB instance or a database name. This could also be <code>null</code> or an array like a traditional Backbone collection, however then the PouchDB instance must be passed via <code>options.pouch</code>.</li>
-<li><strong>options</strong> <em>object; optional</em> - An object of options to initiate the database with. This variable is passed directly to the <code>Backbone.Collection</code> constructor.<ul>
-<li><strong>options.pouch</strong> <em>object | PouchDB</em> - An instance of PouchDB or an object of options to pass to the PouchDB constructor.</li>
-</ul>
-</li>
-</ul>
 
             </div>
             
-            <div class="content"><div class='highlight'><pre><span class="hljs-built_in">module</span>.exports = Backbone.Collection.extend({
-
-    constructor: <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(models, options)</span> </span>{
-        options = options || {};
-        <span class="hljs-keyword">var</span> pouch;
-
-        <span class="hljs-keyword">if</span> (<span class="hljs-keyword">typeof</span> models === <span class="hljs-string">"string"</span>) {
-            pouch = <span class="hljs-keyword">new</span> PouchDB(models, options.pouch);
-            models = <span class="hljs-literal">null</span>;
-        } <span class="hljs-keyword">if</span> (models <span class="hljs-keyword">instanceof</span> PouchDB) {
-            pouch = models;
-            models = <span class="hljs-literal">null</span>;
-        } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (options.pouch) {
-            pouch = options.pouch;
+            <div class="content"><div class='highlight'><pre><span class="hljs-keyword">var</span> Lazybones = <span class="hljs-built_in">module</span>.exports = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(gdef)</span> </span>{
+    <span class="hljs-keyword">return</span> { lazybones: <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(defaults)</span> </span>{
+        <span class="hljs-keyword">var</span> db = <span class="hljs-keyword">this</span>;
+        <span class="hljs-keyword">return</span> <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(method, model, options)</span> </span>{
+            options = merge.defaults({}, options, defaults, gdef, { database: db });
+            <span class="hljs-keyword">return</span> Lazybones.sync.call(<span class="hljs-keyword">this</span>, method, model, options);
         }
+    } };
+}
 
-        <span class="hljs-keyword">if</span> (!(pouch <span class="hljs-keyword">instanceof</span> PouchDB)) {
-            <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> utils.LazyError(<span class="hljs-string">"INVALID_POUCH"</span>);
-        }
-
-        <span class="hljs-keyword">this</span>.pouch = pouch;
-        pouch.once(<span class="hljs-string">"destroyed"</span>, <span class="hljs-keyword">this</span>.trigger.bind(<span class="hljs-keyword">this</span>, <span class="hljs-string">"destroyed"</span>));
-
-        <span class="hljs-keyword">return</span> Backbone.Collection.call(<span class="hljs-keyword">this</span>, models, options);
-    },</pre></div></div>
+<span class="hljs-keyword">var</span> methodMap = {
+    create: <span class="hljs-string">"post"</span>,
+    update: <span class="hljs-string">"put"</span>,
+    patch: <span class="hljs-string">"put"</span>,
+    <span class="hljs-keyword">delete</span>: <span class="hljs-string">"remove"</span>
+};</pre></div></div>
             
         </li>
         
@@ -130,13 +97,13 @@
               <div class="pilwrap for-h2">
                 <a class="pilcrow" href="#section-3">&#182;</a>
               </div>
-              <h2>Instance Properties &amp; Methods</h2>
-<p>These properties are addition to methods provided by <code>Backbone.Collection</code>.</p>
+              <h2>Options &amp; Defaults</h2>
+<p>These are the default options used by Lazybones. Modify this variable to change the default options globally.</p>
             </div>
             
-            <div class="content"><div class='highlight'><pre>    model: Document,
-    parse: utils.parse,
-    sync: <span class="hljs-built_in">require</span>(<span class="hljs-string">"./sync"</span>),</pre></div></div>
+            <div class="content"><div class='highlight'><pre>Lazybones.defaults = {
+    success: noop,
+    error: noop,</pre></div></div>
             
         </li>
         
@@ -144,75 +111,14 @@
         <li id="section-4">
             <div class="annotation">
               
-              <div class="pilwrap for-h3">
+              <div class="pilwrap for-h4">
                 <a class="pilcrow" href="#section-4">&#182;</a>
               </div>
-              <h3>connect()</h3>
-<p>Listens to the PouchDB changes feed and sets any changes on the in-memory <a href="document.html">Documents</a>. By default, the changes are &quot;live&quot; meaning that changes will be listened for continuously. Use <code>db.disconnect()</code> to stop a live connection.</p><p><code>this</code> is returned for method chaining.</p><h4>Arguments</h4>
-<ul>
-<li><strong>options</strong> <em>object; optional</em> - An object of properties that are passed to <code>pouch.changes()</code>. All PouchDB changes properties are allowed, except for <code>include_docs</code> which is set to true. Below are the properties with default values. Please see the <a href="http://pouchdb.com/api.html#changes">PocuhDB documentation</a> for the remaining options.<ul>
-<li><strong>options.live</strong> <em>boolean</em> - The database will continuously listen for changes, keeping the in-memory documents in sync with those in the database. Setting this to <code>false</code> will result in the database disconnecting as soon as it is has been caught up. Default value is <code>true</code>.</li>
-</ul>
-</li>
-</ul>
-
+              <h4>options.changes</h4>
+<p>This property determines if sync uses the changes feed when fetching data. This forces sync into an alternate mode that avoids Backbone&#39;s <code>success</code> and <code>error</code> callbacks and updates the</p>
             </div>
             
-            <div class="content"><div class='highlight'><pre>    connect: <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(options)</span> </span>{
-        <span class="hljs-keyword">var</span> self = <span class="hljs-keyword">this</span>;
-
-        <span class="hljs-comment">// always disconnect first</span>
-        <span class="hljs-keyword">this</span>.disconnect();
-
-        <span class="hljs-comment">// create/update function</span>
-        <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">onChange</span><span class="hljs-params">(row)</span> </span>{
-            self.add(row.doc, { merge: <span class="hljs-literal">true</span>, pouch: self.pouch });
-        }
-
-        <span class="hljs-comment">// uptodate event should only be called once per connection</span>
-        <span class="hljs-keyword">var</span> onUpToDate = _.once(<span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(info)</span> </span>{
-            self.trigger(<span class="hljs-string">"uptodate"</span>, info);
-        });
-
-        <span class="hljs-comment">// the listener</span>
-        <span class="hljs-keyword">var</span> listener =
-        <span class="hljs-keyword">this</span>._pouchChange = <span class="hljs-keyword">this</span>.pouch.changes(_.extend({
-            live: <span class="hljs-literal">true</span>
-        }, options, {
-            include_docs: <span class="hljs-literal">true</span>
-        }))
-
-        <span class="hljs-comment">// listen for uptodate</span>
-        .on(<span class="hljs-string">"uptodate"</span>, onUpToDate)
-        .on(<span class="hljs-string">"complete"</span>, onUpToDate) <span class="hljs-comment">// when live = false</span>
-
-        <span class="hljs-comment">// creates and updates are handled the same</span>
-        .on(<span class="hljs-string">"create"</span>, onChange)
-        .on(<span class="hljs-string">"update"</span>, onChange)
-
-        <span class="hljs-comment">// remove everything marked as a delete</span>
-        .on(<span class="hljs-string">"delete"</span>, <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(row)</span> </span>{
-            self.remove(row.id);
-        });
-
-        <span class="hljs-comment">// catch any terminating errors</span>
-        Promise.cast(listener.catch(<span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(e)</span> </span>{
-            self.trigger(<span class="hljs-string">"error"</span>, e);
-        }))
-
-        .finally(<span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(resp)</span> </span>{
-            <span class="hljs-comment">// clean up</span>
-            self.disconnect();
-
-            <span class="hljs-comment">// announce disconnect</span>
-            self.trigger(<span class="hljs-string">"disconnect"</span>, listener, resp);
-        });
-
-        <span class="hljs-comment">// annouce the connection</span>
-        <span class="hljs-keyword">this</span>.trigger(<span class="hljs-string">"connect"</span>, listener);
-
-        <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
-    },</pre></div></div>
+            <div class="content"><div class='highlight'><pre>    changes: <span class="hljs-literal">false</span>,</pre></div></div>
             
         </li>
         
@@ -220,22 +126,14 @@
         <li id="section-5">
             <div class="annotation">
               
-              <div class="pilwrap for-h3">
+              <div class="pilwrap for-h4">
                 <a class="pilcrow" href="#section-5">&#182;</a>
               </div>
-              <h3>disconnect()</h3>
-<p>Stops the database from listening to the PouchDB changes feed. This method has no effect if the database is not currently connected.</p><p><code>this</code> is returned for method chaining.</p>
+              <h4>options.query</h4>
+<p>This property can be a map function or the id of a view. This is what gets passed as the first argument to <code>db.query()</code>.</p>
             </div>
             
-            <div class="content"><div class='highlight'><pre>    disconnect: <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> </span>{
-        <span class="hljs-comment">// only disconnect if connected</span>
-        <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>.isConnected()) {
-            <span class="hljs-keyword">this</span>._pouchChange.cancel();
-            <span class="hljs-keyword">delete</span> <span class="hljs-keyword">this</span>._pouchChange;
-        }
-
-        <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>;
-    },</pre></div></div>
+            <div class="content"><div class='highlight'><pre>    query: <span class="hljs-literal">null</span>,</pre></div></div>
             
         </li>
         
@@ -243,16 +141,14 @@
         <li id="section-6">
             <div class="annotation">
               
-              <div class="pilwrap for-h3">
+              <div class="pilwrap for-h4">
                 <a class="pilcrow" href="#section-6">&#182;</a>
               </div>
-              <h3>isConnected()</h3>
-<p>Returns <code>true</code> if the Lazybones instance is actively listening to the PouchDB changes feed.</p>
+              <h4>options.rowKey</h4>
+<p>The key to extract from view rows on query fetches.</p>
             </div>
             
-            <div class="content"><div class='highlight'><pre>    isConnected: <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> </span>{
-        <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>._pouchChange != <span class="hljs-literal">null</span>;
-    },</pre></div></div>
+            <div class="content"><div class='highlight'><pre>    rowKey: <span class="hljs-string">"doc"</span>,</pre></div></div>
             
         </li>
         
@@ -260,19 +156,18 @@
         <li id="section-7">
             <div class="annotation">
               
-              <div class="pilwrap for-h3">
+              <div class="pilwrap for-h4">
                 <a class="pilcrow" href="#section-7">&#182;</a>
               </div>
-              <h3>destroy()</h3>
-<p>Destroys the underlying PouchDB database. This will keep all the existing documents in-memory, so call <code>db.reset()</code> to remove those as well. The Lazybones instance should not used after this method has been called.</p><p>This method returns a promise that is resolved when the database is destroyed.</p>
+              <h4>options.options</h4>
+<p>These are specific options for each PouchDB method.</p>
             </div>
             
-            <div class="content"><div class='highlight'><pre>    destroy: <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> </span>{
-        <span class="hljs-comment">// disconnect live connection</span>
-        <span class="hljs-keyword">this</span>.disconnect();
-
-        <span class="hljs-comment">// destroy the underlying pouch database</span>
-        <span class="hljs-keyword">return</span> Promise.cast(<span class="hljs-keyword">this</span>.pouch.destroy()).bind(<span class="hljs-keyword">this</span>);
+            <div class="content"><div class='highlight'><pre>    options: {
+        get: {},
+        query: { include_docs: <span class="hljs-literal">true</span>, returnDocs: <span class="hljs-literal">false</span> },
+        allDocs: { include_docs: <span class="hljs-literal">true</span> },
+        changes: { returnDocs: <span class="hljs-literal">false</span> }
     },</pre></div></div>
             
         </li>
@@ -281,20 +176,23 @@
         <li id="section-8">
             <div class="annotation">
               
-              <div class="pilwrap for-h3">
+              <div class="pilwrap for-h4">
                 <a class="pilcrow" href="#section-8">&#182;</a>
               </div>
-              <h3>_prepareModel()</h3>
-<p>Any models created from the collection should have references back to the underlying PouchDB instance. This helps during syncing, but is also useful inside the model classes. This custom <code>_prepareModel()</code> method overrides Backbone&#39;s to ensure the PouchDB is always passed along to documents.</p>
+              <h4>options.fetch()</h4>
+<p>This method controls how the sync function will fetch data. The method currently handles normal gets and queries.</p>
             </div>
             
-            <div class="content"><div class='highlight'><pre>    _prepareModel: <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(attrs, options)</span> </span>{
-        options = options || {};
-        <span class="hljs-keyword">if</span> (options.pouch == <span class="hljs-literal">null</span>) options.pouch = <span class="hljs-keyword">this</span>.pouch;
-        <span class="hljs-keyword">return</span> Backbone.Collection.prototype._prepareModel.call(<span class="hljs-keyword">this</span>, attrs, options);
-    }
+            <div class="content"><div class='highlight'><pre>    fetch: <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(model, db, options)</span> </span>{
+        <span class="hljs-comment">// a single model</span>
+        <span class="hljs-keyword">if</span> (!isCollection(model)) <span class="hljs-keyword">return</span> db.get(model.id, options.options.get);
 
-}, {</pre></div></div>
+        <span class="hljs-comment">// process query requests</span>
+        <span class="hljs-keyword">if</span> (options.query) <span class="hljs-keyword">return</span> db.query(options.query, options.options.query);
+
+        <span class="hljs-comment">// regular collection fetch</span>
+        <span class="hljs-keyword">return</span> db.allDocs(options.options.allDocs);
+    },</pre></div></div>
             
         </li>
         
@@ -302,27 +200,157 @@
         <li id="section-9">
             <div class="annotation">
               
-              <div class="pilwrap for-h2">
+              <div class="pilwrap for-h4">
                 <a class="pilcrow" href="#section-9">&#182;</a>
               </div>
-              <h2>Static Methods &amp; Properties</h2>
-<ul>
-<li><strong>Lazybones.utils</strong> <em>object</em> - Lazybones and PouchDB utility methods.</li>
-<li><strong>Lazybones.Document</strong> <em>function</em> - The Document constructor, which is a subclass of <code>Backbone.Model</code>.</li>
-<li><strong>Lazybones.sync</strong> <em>function</em> - The Lazybones sync method. This replaces <code>Backbone.sync</code>.</li>
-<li><strong>Lazybones.extend</strong> <em>function</em> - Creates a subclass of Lazybones. This is the same method that Backbone uses.</li>
-</ul>
-
+              <h4>options.process()</h4>
+<p>This method parses the result from PouchDB before sending it to Backbone.</p>
             </div>
             
-            <div class="content"><div class='highlight'><pre>    VERSION: <span class="hljs-string">'0.2.1'</span>,
-    utils: utils,
-    sync: sync,
-    Document: Document,
-    Backbone: Backbone,
-    PouchDB: PouchDB
+            <div class="content"><div class='highlight'><pre>    process: <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(res, method, model, options)</span> </span>{
+        <span class="hljs-comment">// parse non-document responses</span>
+        <span class="hljs-keyword">if</span> (res._id == <span class="hljs-literal">null</span> &amp;&amp; res._rev == <span class="hljs-literal">null</span>) {
+            <span class="hljs-comment">// write result</span>
+            <span class="hljs-keyword">if</span> (method !== <span class="hljs-string">"read"</span>) <span class="hljs-keyword">return</span> { _id: res.id, _rev: res.rev };
 
-});</pre></div></div>
+            <span class="hljs-comment">// view result</span>
+            <span class="hljs-keyword">if</span> (res.rows != <span class="hljs-literal">null</span>) {
+                <span class="hljs-keyword">if</span> (isCollection(model)) <span class="hljs-keyword">return</span> res.rows.map(<span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(row)</span> </span>{
+                    <span class="hljs-keyword">return</span> row[options.rowKey];
+                });
+
+                <span class="hljs-comment">// grab just the first row for models</span>
+                <span class="hljs-keyword">return</span> res.rows.length ? res.rows[<span class="hljs-number">0</span>][options.rowKey] : <span class="hljs-literal">null</span>;
+            }
+        }
+
+        <span class="hljs-keyword">return</span> res;
+    }
+};</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-10">
+            <div class="annotation">
+              
+              <div class="pilwrap for-h2">
+                <a class="pilcrow" href="#section-10">&#182;</a>
+              </div>
+              <h2>Sync</h2>
+<p>This is the heart of Lazybones. Use it wherever <code>Backbone.sync</code> is used.</p>
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>Lazybones.sync = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(method, model, options)</span> </span>{
+    <span class="hljs-keyword">var</span> self, dbMethod, db, onChange, promise, chgopts, processed, processPromise;
+
+    <span class="hljs-comment">// resolve method and database</span>
+    self = <span class="hljs-keyword">this</span>;
+    options = merge.defaults({}, options, getSyncOptions(model), Lazybones.defaults);
+    method = method.toLowerCase().trim();
+    db = getDatabase(options) || getDatabase(model);
+    <span class="hljs-keyword">if</span> (db == <span class="hljs-literal">null</span>) <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Error</span>(<span class="hljs-string">"Missing PouchDB database."</span>);
+
+    <span class="hljs-comment">// deal with writes</span>
+    <span class="hljs-keyword">if</span> (method !== <span class="hljs-string">"read"</span>) {
+        promise = db[methodMap[method]](model.toJSON(), options.options[methodMap[method]]);
+    }
+
+    <span class="hljs-comment">// deal with normal reads</span>
+    <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (!options.changes) {
+        promise = options.fetch.call(self, model, db, options);
+        <span class="hljs-keyword">if</span> (promise == <span class="hljs-literal">null</span> || <span class="hljs-keyword">typeof</span> promise.then !== <span class="hljs-string">"function"</span>) {
+            promise = Promise.resolve(promise);
+        }
+    }
+
+    <span class="hljs-comment">// deal with changes feed reads</span>
+    <span class="hljs-keyword">else</span> {
+        promise = db.changes(merge.defaults({
+            include_docs: <span class="hljs-literal">true</span>
+        }, options.changes, options.options.changes));
+
+        onChange = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(row)</span> </span>{
+            model.set(row.doc, merge.extend({ remove: <span class="hljs-literal">false</span> }, options));
+        }
+
+        promise.on(<span class="hljs-string">"create"</span>, onChange);
+        promise.on(<span class="hljs-string">"update"</span>, onChange);
+
+        promise.on(<span class="hljs-string">"delete"</span>, <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(row)</span> </span>{
+            <span class="hljs-keyword">var</span> m = !isCollection(model) ? model : model.remove(row.id, options);
+            <span class="hljs-keyword">if</span> (m) m.set(row.doc, options);
+        });
+
+        <span class="hljs-comment">// return the changes object immediately</span>
+        <span class="hljs-keyword">return</span> promise;
+    }
+
+    <span class="hljs-comment">// create a promise so sync promise waits for backbone to write to model</span>
+    processPromise = <span class="hljs-keyword">new</span> Promise(<span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(resolve, reject)</span> </span>{
+        <span class="hljs-keyword">var</span> success = options.success,
+            error = options.error;
+
+        options.success = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> </span>{
+            success.apply(<span class="hljs-keyword">this</span>, <span class="hljs-built_in">arguments</span>);
+            resolve();
+        };
+
+        options.error = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(err)</span> </span>{
+            error.apply(<span class="hljs-keyword">this</span>, <span class="hljs-built_in">arguments</span>);
+            reject(err);
+        };
+    });
+
+    <span class="hljs-comment">// process the result into something that backbone can use</span>
+    <span class="hljs-comment">// and ship result to success and error callbacks</span>
+    promise.then(<span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(res)</span> </span>{
+        <span class="hljs-keyword">return</span> options.process.call(self, res, method, model, options);
+    }).then(options.success, options.error);
+
+    <span class="hljs-comment">// trigger the request event</span>
+    model.trigger(<span class="hljs-string">'request'</span>, model, db, options);
+
+    <span class="hljs-comment">// return the original promise with the original result</span>
+    <span class="hljs-keyword">return</span> Promise.all([ promise, processPromise ])
+    .then(<span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(res)</span> </span>{ <span class="hljs-keyword">return</span> res[<span class="hljs-number">0</span>]; });
+}
+
+<span class="hljs-keyword">var</span> isCollection =
+Lazybones.isCollection = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(v)</span> </span>{
+    <span class="hljs-keyword">return</span> v != <span class="hljs-literal">null</span> &amp;&amp;
+        <span class="hljs-built_in">Array</span>.isArray(v.models) &amp;&amp;
+        <span class="hljs-keyword">typeof</span> v.model === <span class="hljs-string">"function"</span> &amp;&amp;
+        <span class="hljs-keyword">typeof</span> v.add === <span class="hljs-string">"function"</span> &amp;&amp;
+        <span class="hljs-keyword">typeof</span> v.remove === <span class="hljs-string">"function"</span>;
+}
+
+Lazybones.isModel = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(val)</span> </span>{
+    <span class="hljs-keyword">return</span> val != <span class="hljs-literal">null</span> &amp;&amp;
+        <span class="hljs-keyword">typeof</span> val.cid === <span class="hljs-string">"string"</span> &amp;&amp;
+        <span class="hljs-keyword">typeof</span> val.attributes === <span class="hljs-string">"object"</span> &amp;&amp;
+        <span class="hljs-keyword">typeof</span> val.get === <span class="hljs-string">"function"</span> &amp;&amp;
+        <span class="hljs-keyword">typeof</span> val.set === <span class="hljs-string">"function"</span>;
+}
+
+<span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">getSyncOptions</span><span class="hljs-params">(m)</span> </span>{
+    <span class="hljs-keyword">return</span> m &amp;&amp; (lookup(m, [<span class="hljs-string">"syncOptions"</span>,<span class="hljs-string">"sync_options"</span>]) || getSyncOptions(m.collection));
+}
+
+<span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">getDatabase</span><span class="hljs-params">(m)</span> </span>{
+    <span class="hljs-keyword">return</span> m &amp;&amp; (lookup(m, [<span class="hljs-string">"pouch"</span>,<span class="hljs-string">"pouchdb"</span>,<span class="hljs-string">"db"</span>,<span class="hljs-string">"database"</span>]) || getDatabase(m.collection));
+}
+
+<span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">lookup</span><span class="hljs-params">(o, keys)</span> </span>{
+    <span class="hljs-keyword">var</span> v, i;
+    <span class="hljs-keyword">for</span> (i <span class="hljs-keyword">in</span> keys) {
+        v = o[keys[i]];
+        <span class="hljs-keyword">if</span> (<span class="hljs-keyword">typeof</span> v === <span class="hljs-string">"function"</span>) {
+            <span class="hljs-keyword">return</span> v.call(o, <span class="hljs-built_in">Array</span>.prototype.slice.call(<span class="hljs-built_in">arguments</span>, <span class="hljs-number">2</span>));
+        }
+        <span class="hljs-keyword">if</span> (<span class="hljs-keyword">typeof</span> v !== <span class="hljs-string">"undefined"</span>) <span class="hljs-keyword">return</span> v;
+    }
+}</pre></div></div>
             
         </li>
         
