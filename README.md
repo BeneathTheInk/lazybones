@@ -1,6 +1,6 @@
 # Lazybones
 
-Lazybones is a modified Backbone collection that integrates with PouchDB. By combining Backbone's object-oriented approach with PouchDB's super flexible databases, Lazybones provides a highly-functional API for storing and manipulating data in the browser and Node.js.
+A custom Backbone sync method for PouchDB, with support for views and changes. This is very similar to [backbone-pouch](https://github.com/jo/backbone-pouch) but is slightly more dynamic and up-to-date for the latest PouchDB API.
 
 ## Install
 
@@ -18,34 +18,36 @@ $ npm install lazybones
 
 ## Basic Usage
 
-Lazybones is a modified Backbone collection with a custom sync function that allows for fetching and writing to a Pouch database. To begin using Lazybones, you only need the name of the database you are using:
+### Method 1: PouchDB Plugin
 
-```javascript
-var db = new Lazybones("mydb");
-```
+If you want to generate a sync function with the Pouch database already attached, use the built in plugin interface. `db.lazybones()` will produce a sync function that uses `db` to fetch data.
 
-This will return an empty backbone collection attached to a newly initiated PouchDB instance. This instance if available via `db.pouch` although you should rarely need access to it.
+```js
+PouchDB.plugin(Lazybones({
+    // global options
+}));
 
-At this point you can load in documents from the database into memory. The easiest way to do this is via a normal fetch:
-
-```javascript
-db.fetch().then(function() {
-   // collection now contains everything in PouchDB
+// later
+var db = new PouchDB("mydb");
+Backbone.Model.extend({
+    sync: db.lazybones()
 });
 ```
 
-Using fetch, you can also retrieve specific subsets of documents, for example only those in a specific CouchDB view. Just add `query: "myview"` to fetch options. All the other standard Backbone sync options are available too.
+### Method 2: Generic sync
 
-Lazybones also provides a method for continuously listening to changes in the database and replicating them to the in-memory documents:
+The simplest method is to use the raw sync method directly. You will need to reference the Pouch database through the model.
 
-```javascript
-db.connect();
-
-// later
-db.disconnect();
+```js
+var db = new PouchDB("mydb");
+Backbone.Model.extend({
+    sync: Lazybones.sync,
+    pouchdb: db,
+    syncOptions: {
+        // options specific to this model
+    }
+});
 ```
-
-When `.connect()` is called, the database will listen to the database changes feed and automatically push changes to documents in the collection. This means that `connect`, in a lot of ways, is like fetch with the exception that it continually updates the documents.
 
 ## Documentation
 
@@ -60,10 +62,8 @@ npm run build-docs
 Lazybones uses Grunt to build a Browserify bundle from the original source found in `lib/`. When the command below completes, the compiled source will be saved to `dist/` directory.
 
 ```bash
-npm install && grunt
+npm install && npm run build-js
 ```
-
-If you don't the Grunt cli tools installed globally, run `npm install -g grunt-cli` before running that command.
 
 ## Running the Unit Tests
 

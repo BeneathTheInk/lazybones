@@ -17,6 +17,7 @@
 	"scripts": {
 		"dev": "node test/browser",
 		"test": "./node_modules/.bin/mocha test",
+		"build-js": "grunt dist",
 		"build-docs": "./node_modules/.bin/doxxo -i README.md README.md lib/"
 	},
 	"main": "lib/lazybones.js",
@@ -30,6 +31,7 @@
 		"doxxo": "~0.2.2",
 		"grunt": "~0.4.5",
 		"grunt-browserify": "~3.8.0",
+		"grunt-cli": "~0.1.13",
 		"grunt-contrib-clean": "~0.6.0",
 		"grunt-contrib-uglify": "~0.9.1",
 		"grunt-contrib-watch": "~0.6.1",
