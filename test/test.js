@@ -122,6 +122,21 @@ describe("CRUD", function() {
 		.catch(done);
 	});
 
+	it("errors up on missing model", function(done) {
+		var model = col.add({ _id: "testmodel" });
+
+		return model.fetch()
+
+		.then(function() {
+			throw new Error("Expecting a missing error.");
+		}, function(e) {
+			expect(e.status).to.equal(404);
+			expect(e.reason).to.equal("missing");
+		})
+
+		.then(done, done);
+	});
+
 });
 
 describe("Changes Feed", function() {
