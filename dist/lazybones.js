@@ -2,7 +2,7 @@
  * Lazybones
  * (c) 2014 Beneath the Ink, Inc.
  * MIT License
- * Version 0.3.0
+ * Version 0.3.1
  */
 
 (function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}g.Lazybones = f()}})(function(){var define,module,exports;return (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
@@ -112,6 +112,9 @@ Lazybones.defaults = {
 				// grab just the first row for models
 				return res.rows.length ? res.rows[0][options.rowKey] : null;
 			}
+
+			// changes feed result
+			if (res[options.rowKey] != null) return res[options.rowKey];
 		}
 
 		return res;
@@ -123,11 +126,11 @@ Lazybones.defaults = {
  * This is the heart of Lazybones. Use it wherever `Backbone.sync` is used.
  */
 Lazybones.sync = function(method, model, options) {
-	var self, dbMethod, db, onChange, promise, chgopts, processed, processPromise;
+	var self, dbMethod, db, onChange, promise, chgopts, chgfilter, processed, processPromise;
 
 	// resolve method and database
 	self = this;
-	options = merge.defaults({}, options, getSyncOptions(model), Lazybones.defaults);
+	options = merge.defaults({}, options, getSyncOptions(model), getSyncOptions(model.collection), Lazybones.defaults);
 	method = method.toLowerCase().trim();
 	db = getDatabase(options) || getDatabase(model);
 	if (db == null) throw new Error("Missing PouchDB database.");
@@ -147,12 +150,21 @@ Lazybones.sync = function(method, model, options) {
 
 	// deal with changes feed reads
 	else {
-		promise = db.changes(merge.defaults({
+		chgopts = merge.defaults({
 			include_docs: true
-		}, options.changes, options.options.changes));
+		}, options.changes, options.options.changes);
+
+		if (typeof chgopts.filter === "function") {
+			chgfilter = chgopts.filter;
+			chgopts.filter = null;
+		}
+
+		promise = db.changes(chgopts);
 
 		onChange = function(row) {
-			model.set(row.doc, merge.extend({ remove: false }, options));
+			var val = options.process.call(self, row, method, model, options);
+			if (chgfilter && !chgfilter(val, row, options)) return;
+			model.set(val, merge.extend({ remove: false }, options));
 		}
 
 		promise.on("create", onChange);
@@ -160,41 +172,29 @@ Lazybones.sync = function(method, model, options) {
 
 		promise.on("delete", function(row) {
 			var m = !isCollection(model) ? model : model.remove(row.id, options);
-			if (m) m.set(row.doc, options);
+
+			if (m) {
+				var val = options.process.call(self, row, method, model, options);
+				m.set(val, options);
+			}
 		});
 
 		// return the changes object immediately
 		return promise;
 	}
 
-	// create a promise so sync promise waits for backbone to write to model
-	processPromise = new Promise(function(resolve, reject) {
-		var success = options.success,
-			error = options.error;
-
-		options.success = function() {
-			success.apply(this, arguments);
-			resolve();
-		};
-
-		options.error = function(err) {
-			error.apply(this, arguments);
-			reject(err);
-		};
-	});
-
-	// process the result into something that backbone can use
-	// and ship result to success and error callbacks
-	promise.then(function(res) {
-		return options.process.call(self, res, method, model, options);
-	}).then(options.success, options.error);
-
 	// trigger the request event
 	model.trigger('request', model, db, options);
 
-	// return the original promise with the original result
-	return Promise.all([ promise, processPromise ])
-	.then(function(res) { return res[0]; });
+	// process the result into something that backbone can use
+	// and ship result to success and error callbacks
+	return promise.then(function(res) {
+		options.success(options.process.call(self, res, method, model, options));
+		return res;
+	}).catch(function(err) {
+		options.error(err);
+		throw err;
+	});
 }
 
 var isCollection =
@@ -215,7 +215,7 @@ Lazybones.isModel = function(val) {
 }
 
 function getSyncOptions(m) {
-	return m && (lookup(m, ["syncOptions","sync_options"]) || getSyncOptions(m.collection));
+	return m && lookup(m, ["syncOptions","sync_options"]);
 }
 
 function getDatabase(m) {

@@ -64,7 +64,7 @@
                 <a class="pilcrow" href="#section-2">&#182;</a>
               </div>
               <h2>PouchDB Plugin</h2>
-<p>This is the PouchDB plugin method that attaches a <code>lazybones()</code> method to newly created PouchDB instances. The <code>lazybones()</code> will create a sync method (with options) that is tied directly the database it was called on.</p><pre><code class="lang-js">PouchDB.plugin(Lazybones());
+<p>This is the PouchDB plugin method that attaches a <code>lazybones()</code> method to newly created PouchDB instances. The <code>lazybones()</code> will create a sync method (with options) that is tied directly to the database it was called on.</p><pre><code class="lang-js">PouchDB.plugin(Lazybones());
 <span class="hljs-keyword">var</span> db = <span class="hljs-keyword">new</span> PouchDB(<span class="hljs-string">"mydb"</span>);
 db.lazybones(); <span class="hljs-comment">// returns a sync function</span>
 </code></pre>
@@ -222,6 +222,9 @@ db.lazybones(); <span class="hljs-comment">// returns a sync function</span>
                 <span class="hljs-comment">// grab just the first row for models</span>
                 <span class="hljs-keyword">return</span> res.rows.length ? res.rows[<span class="hljs-number">0</span>][options.rowKey] : <span class="hljs-literal">null</span>;
             }
+
+            <span class="hljs-comment">// changes feed result</span>
+            <span class="hljs-keyword">if</span> (res[options.rowKey] != <span class="hljs-literal">null</span>) <span class="hljs-keyword">return</span> res[options.rowKey];
         }
 
         <span class="hljs-keyword">return</span> res;
@@ -242,11 +245,11 @@ db.lazybones(); <span class="hljs-comment">// returns a sync function</span>
             </div>
             
             <div class="content"><div class='highlight'><pre>Lazybones.sync = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(method, model, options)</span> </span>{
-    <span class="hljs-keyword">var</span> self, dbMethod, db, onChange, promise, chgopts, processed, processPromise;
+    <span class="hljs-keyword">var</span> self, dbMethod, db, onChange, promise, chgopts, chgfilter, processed, processPromise;
 
     <span class="hljs-comment">// resolve method and database</span>
     self = <span class="hljs-keyword">this</span>;
-    options = merge.defaults({}, options, getSyncOptions(model), Lazybones.defaults);
+    options = merge.defaults({}, options, getSyncOptions(model), getSyncOptions(model.collection), Lazybones.defaults);
     method = method.toLowerCase().trim();
     db = getDatabase(options) || getDatabase(model);
     <span class="hljs-keyword">if</span> (db == <span class="hljs-literal">null</span>) <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Error</span>(<span class="hljs-string">"Missing PouchDB database."</span>);
@@ -266,12 +269,21 @@ db.lazybones(); <span class="hljs-comment">// returns a sync function</span>
 
     <span class="hljs-comment">// deal with changes feed reads</span>
     <span class="hljs-keyword">else</span> {
-        promise = db.changes(merge.defaults({
+        chgopts = merge.defaults({
             include_docs: <span class="hljs-literal">true</span>
-        }, options.changes, options.options.changes));
+        }, options.changes, options.options.changes);
+
+        <span class="hljs-keyword">if</span> (<span class="hljs-keyword">typeof</span> chgopts.filter === <span class="hljs-string">"function"</span>) {
+            chgfilter = chgopts.filter;
+            chgopts.filter = <span class="hljs-literal">null</span>;
+        }
+
+        promise = db.changes(chgopts);
 
         onChange = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(row)</span> </span>{
-            model.set(row.doc, merge.extend({ remove: <span class="hljs-literal">false</span> }, options));
+            <span class="hljs-keyword">var</span> val = options.process.call(self, row, method, model, options);
+            <span class="hljs-keyword">if</span> (chgfilter &amp;&amp; !chgfilter(val, row, options)) <span class="hljs-keyword">return</span>;
+            model.set(val, merge.extend({ remove: <span class="hljs-literal">false</span> }, options));
         }
 
         promise.on(<span class="hljs-string">"create"</span>, onChange);
@@ -279,41 +291,29 @@ db.lazybones(); <span class="hljs-comment">// returns a sync function</span>
 
         promise.on(<span class="hljs-string">"delete"</span>, <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(row)</span> </span>{
             <span class="hljs-keyword">var</span> m = !isCollection(model) ? model : model.remove(row.id, options);
-            <span class="hljs-keyword">if</span> (m) m.set(row.doc, options);
+
+            <span class="hljs-keyword">if</span> (m) {
+                <span class="hljs-keyword">var</span> val = options.process.call(self, row, method, model, options);
+                m.set(val, options);
+            }
         });
 
         <span class="hljs-comment">// return the changes object immediately</span>
         <span class="hljs-keyword">return</span> promise;
     }
 
-    <span class="hljs-comment">// create a promise so sync promise waits for backbone to write to model</span>
-    processPromise = <span class="hljs-keyword">new</span> Promise(<span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(resolve, reject)</span> </span>{
-        <span class="hljs-keyword">var</span> success = options.success,
-            error = options.error;
-
-        options.success = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> </span>{
-            success.apply(<span class="hljs-keyword">this</span>, <span class="hljs-built_in">arguments</span>);
-            resolve();
-        };
-
-        options.error = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(err)</span> </span>{
-            error.apply(<span class="hljs-keyword">this</span>, <span class="hljs-built_in">arguments</span>);
-            reject(err);
-        };
-    });
-
-    <span class="hljs-comment">// process the result into something that backbone can use</span>
-    <span class="hljs-comment">// and ship result to success and error callbacks</span>
-    promise.then(<span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(res)</span> </span>{
-        <span class="hljs-keyword">return</span> options.process.call(self, res, method, model, options);
-    }).then(options.success, options.error);
-
     <span class="hljs-comment">// trigger the request event</span>
     model.trigger(<span class="hljs-string">'request'</span>, model, db, options);
 
-    <span class="hljs-comment">// return the original promise with the original result</span>
-    <span class="hljs-keyword">return</span> Promise.all([ promise, processPromise ])
-    .then(<span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(res)</span> </span>{ <span class="hljs-keyword">return</span> res[<span class="hljs-number">0</span>]; });
+    <span class="hljs-comment">// process the result into something that backbone can use</span>
+    <span class="hljs-comment">// and ship result to success and error callbacks</span>
+    <span class="hljs-keyword">return</span> promise.then(<span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(res)</span> </span>{
+        options.success(options.process.call(self, res, method, model, options));
+        <span class="hljs-keyword">return</span> res;
+    }).catch(<span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(err)</span> </span>{
+        options.error(err);
+        <span class="hljs-keyword">throw</span> err;
+    });
 }
 
 <span class="hljs-keyword">var</span> isCollection =
@@ -334,7 +334,7 @@ Lazybones.isModel = <span class="hljs-function"><span class="hljs-keyword">funct
 }
 
 <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">getSyncOptions</span><span class="hljs-params">(m)</span> </span>{
-    <span class="hljs-keyword">return</span> m &amp;&amp; (lookup(m, [<span class="hljs-string">"syncOptions"</span>,<span class="hljs-string">"sync_options"</span>]) || getSyncOptions(m.collection));
+    <span class="hljs-keyword">return</span> m &amp;&amp; lookup(m, [<span class="hljs-string">"syncOptions"</span>,<span class="hljs-string">"sync_options"</span>]);
 }
 
 <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">getDatabase</span><span class="hljs-params">(m)</span> </span>{
